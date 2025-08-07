@@ -22,7 +22,9 @@ class RateLimiter {
   }
 
   isAllowed(identifier: string): boolean {
-    const key = this.config.keyGenerator ? this.config.keyGenerator(identifier) : identifier;
+    const key = this.config.keyGenerator
+      ? this.config.keyGenerator(identifier)
+      : identifier;
     const now = Date.now();
     const entry = this.store.get(key);
 
@@ -53,9 +55,11 @@ class RateLimiter {
   }
 
   getRemaining(identifier: string): number {
-    const key = this.config.keyGenerator ? this.config.keyGenerator(identifier) : identifier;
+    const key = this.config.keyGenerator
+      ? this.config.keyGenerator(identifier)
+      : identifier;
     const entry = this.store.get(key);
-    
+
     if (!entry) {
       return this.config.maxRequests;
     }
@@ -64,14 +68,18 @@ class RateLimiter {
   }
 
   getResetTime(identifier: string): number {
-    const key = this.config.keyGenerator ? this.config.keyGenerator(identifier) : identifier;
+    const key = this.config.keyGenerator
+      ? this.config.keyGenerator(identifier)
+      : identifier;
     const entry = this.store.get(key);
-    
+
     return entry ? entry.resetTime : Date.now();
   }
 
   reset(identifier: string): void {
-    const key = this.config.keyGenerator ? this.config.keyGenerator(identifier) : identifier;
+    const key = this.config.keyGenerator
+      ? this.config.keyGenerator(identifier)
+      : identifier;
     this.store.delete(key);
   }
 
@@ -109,9 +117,15 @@ export const rateLimiters = {
 
 // Hook React pour le rate limiting
 export function useRateLimit(limiter: RateLimiter, identifier: string) {
-  const [isAllowed, setIsAllowed] = useState(() => limiter.isAllowed(identifier));
-  const [remaining, setRemaining] = useState(() => limiter.getRemaining(identifier));
-  const [resetTime, setResetTime] = useState(() => limiter.getResetTime(identifier));
+  const [isAllowed, setIsAllowed] = useState(() =>
+    limiter.isAllowed(identifier)
+  );
+  const [remaining, setRemaining] = useState(() =>
+    limiter.getRemaining(identifier)
+  );
+  const [resetTime, setResetTime] = useState(() =>
+    limiter.getResetTime(identifier)
+  );
 
   const checkLimit = useCallback(() => {
     const allowed = limiter.isAllowed(identifier);
@@ -155,7 +169,9 @@ export function withRateLimit<T extends (...args: any[]) => any>(
 ): T {
   return ((...args: Parameters<T>): ReturnType<T> => {
     if (!limiter.isAllowed(identifier)) {
-      throw new Error(`Rate limit exceeded for ${identifier}. Try again later.`);
+      throw new Error(
+        `Rate limit exceeded for ${identifier}. Try again later.`
+      );
     }
     return fn(...args);
   }) as T;
@@ -163,12 +179,18 @@ export function withRateLimit<T extends (...args: any[]) => any>(
 
 // Décorateur pour les méthodes de classe
 export function rateLimited(limiter: RateLimiter, identifier: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (
+    _target: any,
+    _propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
 
     descriptor.value = function (...args: any[]) {
       if (!limiter.isAllowed(identifier)) {
-        throw new Error(`Rate limit exceeded for ${identifier}. Try again later.`);
+        throw new Error(
+          `Rate limit exceeded for ${identifier}. Try again later.`
+        );
       }
       return originalMethod.apply(this, args);
     };
@@ -181,11 +203,11 @@ export function rateLimited(limiter: RateLimiter, identifier: string) {
 export const rateLimitUtils = {
   // Attendre jusqu'à la prochaine fenêtre
   waitForReset: (limiter: RateLimiter, identifier: string): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const resetTime = limiter.getResetTime(identifier);
       const now = Date.now();
       const waitTime = Math.max(0, resetTime - now);
-      
+
       setTimeout(resolve, waitTime);
     });
   },

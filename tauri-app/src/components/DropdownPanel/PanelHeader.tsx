@@ -7,18 +7,22 @@ interface PanelHeaderProps {
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({ isDark, onToggleTheme }) => {
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '24px',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-    }}>
-      <h1 style={{
-        fontSize: '24px',
-        fontWeight: 'bold',
-        margin: 0
-      }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '24px',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+      }}
+    >
+      <h1
+        style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
+          margin: 0,
+        }}
+      >
         Numa - AI Assistant
       </h1>
       <button
@@ -30,7 +34,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({ isDark, onToggleTheme }) => {
           border: '1px solid rgba(255, 255, 255, 0.2)',
           color: 'white',
           cursor: 'pointer',
-          transition: 'all 0.2s ease'
+          transition: 'all 0.2s ease',
         }}
       >
         {isDark ? '☀️' : '🌙'}

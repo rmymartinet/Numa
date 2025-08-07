@@ -8,12 +8,12 @@ const AppWithRouter: React.FC = () => {
     <Router>
       <Routes>
         {/* <Route path="/" element={<MainHUDPage />} /> */}
-        <Route path="/hud" element={<MainHUDPage />} />
+        <Route path='/hud' element={<MainHUDPage />} />
         {/* <Route path="/blank" element={<BlankPage />} /> */}
-        <Route path="/panel" element={<PanelPage />} />
+        <Route path='/panel' element={<PanelPage />} />
       </Routes>
     </Router>
   );
 };
 
-export default AppWithRouter; 
+export default AppWithRouter;

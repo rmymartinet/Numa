@@ -5,7 +5,10 @@ interface TogglePanelButtonProps {
   onToggle: () => void;
 }
 
-const TogglePanelButton: React.FC<TogglePanelButtonProps> = ({ isExpanded, onToggle }) => {
+const TogglePanelButton: React.FC<TogglePanelButtonProps> = ({
+  isExpanded,
+  onToggle,
+}) => {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Empêcher la propagation vers le parent
     console.log('TogglePanelButton clicked!');
@@ -26,19 +29,23 @@ const TogglePanelButton: React.FC<TogglePanelButtonProps> = ({ isExpanded, onTog
         color: 'white',
         fontSize: '14px',
         cursor: 'pointer',
-        transition: 'all 0.2s ease'
+        transition: 'all 0.2s ease',
       }}
     >
-      <span>{isExpanded ? 'Hide' : 'Show'} ({isExpanded ? 'ON' : 'OFF'})</span>
-      <div style={{
-        width: '12px',
-        height: '12px',
-        border: '2px solid white',
-        borderTop: 'none',
-        borderLeft: 'none',
-        transform: isExpanded ? 'rotate(45deg)' : 'rotate(-135deg)',
-        transition: 'transform 0.3s ease'
-      }} />
+      <span>
+        {isExpanded ? 'Hide' : 'Show'} ({isExpanded ? 'ON' : 'OFF'})
+      </span>
+      <div
+        style={{
+          width: '12px',
+          height: '12px',
+          border: '2px solid white',
+          borderTop: 'none',
+          borderLeft: 'none',
+          transform: isExpanded ? 'rotate(45deg)' : 'rotate(-135deg)',
+          transition: 'transform 0.3s ease',
+        }}
+      />
     </button>
   );
 };

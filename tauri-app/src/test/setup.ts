@@ -26,4 +26,4 @@ vi.mock('tesseract.js', () => ({
   default: {
     recognize: vi.fn(),
   },
-})); 
+}));

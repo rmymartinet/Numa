@@ -1,22 +1,26 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useOptimizedPerformance, useOptimizedRender, useOptimizedCallback } from '../useOptimizedPerformance';
+import {
+  useOptimizedPerformance,
+  useOptimizedRender,
+  useOptimizedCallback,
+} from '../useOptimizedPerformance';
 
 // Mock performance API
 const mockPerformance = {
   now: vi.fn(() => 1000),
   memory: {
-    usedJSHeapSize: 50 * 1024 * 1024 // 50MB
-  }
+    usedJSHeapSize: 50 * 1024 * 1024, // 50MB
+  },
 };
 
 Object.defineProperty(window, 'performance', {
   value: mockPerformance,
-  writable: true
+  writable: true,
 });
 
 // Mock requestAnimationFrame
-const mockRequestAnimationFrame = vi.fn((callback) => {
+const mockRequestAnimationFrame = vi.fn(callback => {
   setTimeout(callback, 16); // 60fps
   return 1;
 });
@@ -25,12 +29,12 @@ const mockCancelAnimationFrame = vi.fn();
 
 Object.defineProperty(window, 'requestAnimationFrame', {
   value: mockRequestAnimationFrame,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(window, 'cancelAnimationFrame', {
   value: mockCancelAnimationFrame,
-  writable: true
+  writable: true,
 });
 
 describe('useOptimizedPerformance', () => {
@@ -40,21 +44,21 @@ describe('useOptimizedPerformance', () => {
   });
 
   it('should initialize with default metrics', () => {
-    const { result } = renderHook(() => 
+    const { result } = renderHook(() =>
       useOptimizedPerformance({ componentName: 'TestComponent' })
     );
 
     expect(result.current.metrics).toEqual({
       renderTime: 0,
       fps: 60,
-      loadTime: 0
+      loadTime: 0,
     });
     expect(result.current.renderCount).toBe(0);
     expect(result.current.isSlow).toBe(false);
   });
 
   it('should measure operation performance', async () => {
-    const { result } = renderHook(() => 
+    const { result } = renderHook(() =>
       useOptimizedPerformance({ componentName: 'TestComponent' })
     );
 
@@ -71,10 +75,10 @@ describe('useOptimizedPerformance', () => {
   });
 
   it('should detect slow renders', () => {
-    const { result } = renderHook(() => 
-      useOptimizedPerformance({ 
+    const { result } = renderHook(() =>
+      useOptimizedPerformance({
         componentName: 'TestComponent',
-        threshold: 10 // 10ms threshold
+        threshold: 10, // 10ms threshold
       })
     );
 
@@ -87,10 +91,10 @@ describe('useOptimizedPerformance', () => {
   });
 
   it('should track FPS when enabled', () => {
-    const { result } = renderHook(() => 
-      useOptimizedPerformance({ 
+    const { result: _result } = renderHook(() =>
+      useOptimizedPerformance({
         componentName: 'TestComponent',
-        enableFPSTracking: true
+        enableFPSTracking: true,
       })
     );
 
@@ -98,10 +102,10 @@ describe('useOptimizedPerformance', () => {
   });
 
   it('should track memory when enabled', () => {
-    const { result } = renderHook(() => 
-      useOptimizedPerformance({ 
+    const { result } = renderHook(() =>
+      useOptimizedPerformance({
         componentName: 'TestComponent',
-        enableMemoryTracking: true
+        enableMemoryTracking: true,
       })
     );
 
@@ -110,7 +114,7 @@ describe('useOptimizedPerformance', () => {
   });
 
   it('should provide debounced operation', () => {
-    const { result } = renderHook(() => 
+    const { result } = renderHook(() =>
       useOptimizedPerformance({ componentName: 'TestComponent' })
     );
 
@@ -121,7 +125,7 @@ describe('useOptimizedPerformance', () => {
   });
 
   it('should provide throttled operation', () => {
-    const { result } = renderHook(() => 
+    const { result } = renderHook(() =>
       useOptimizedPerformance({ componentName: 'TestComponent' })
     );
 
@@ -147,7 +151,7 @@ describe('useOptimizedRender', () => {
 
   it('should use custom equality function', () => {
     const equalityFn = vi.fn((prev, next) => prev.id === next.id);
-    
+
     const { result, rerender } = renderHook(
       ({ value }) => useOptimizedRender(value, [value], equalityFn),
       { initialProps: { value: { id: 1, data: 'initial' } } }
@@ -163,8 +167,8 @@ describe('useOptimizedRender', () => {
 describe('useOptimizedCallback', () => {
   it('should cache results based on maxAge', () => {
     const mockCallback = vi.fn((x: number) => x * 2);
-    
-    const { result } = renderHook(() => 
+
+    const { result } = renderHook(() =>
       useOptimizedCallback(mockCallback, [], { maxAge: 1000 })
     );
 
@@ -185,8 +189,8 @@ describe('useOptimizedCallback', () => {
 
   it('should call callback again after maxAge expires', async () => {
     const mockCallback = vi.fn((x: number) => x * 2);
-    
-    const { result } = renderHook(() => 
+
+    const { result } = renderHook(() =>
       useOptimizedCallback(mockCallback, [], { maxAge: 100 })
     );
 

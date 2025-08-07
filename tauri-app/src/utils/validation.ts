@@ -54,7 +54,12 @@ export class Validator {
     }
 
     // Validation required
-    if (rule.required && (sanitizedValue === null || sanitizedValue === undefined || sanitizedValue === '')) {
+    if (
+      rule.required &&
+      (sanitizedValue === null ||
+        sanitizedValue === undefined ||
+        sanitizedValue === '')
+    ) {
       errors.push('Ce champ est requis');
     }
 
@@ -69,7 +74,11 @@ export class Validator {
     }
 
     // Validation pattern
-    if (rule.pattern && typeof sanitizedValue === 'string' && !rule.pattern.test(sanitizedValue)) {
+    if (
+      rule.pattern &&
+      typeof sanitizedValue === 'string' &&
+      !rule.pattern.test(sanitizedValue)
+    ) {
       errors.push('Format invalide');
     }
 
@@ -106,8 +115,8 @@ export const commonRules = {
     sanitize: (value: string) => value.trim(),
   },
   phone: {
-    pattern: /^[\+]?[0-9\s\-\(\)]{10,}$/,
-    sanitize: (value: string) => value.replace(/[\s\-\(\)]/g, ''),
+    pattern: /^[+]?[0-9\s\-()]{10,}$/,
+    sanitize: (value: string) => value.replace(/[\s\-()]/g, ''),
   },
   password: {
     minLength: 8,

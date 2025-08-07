@@ -11,26 +11,37 @@ export interface KeyboardShortcut {
 }
 
 export function useKeyboardNavigation(shortcuts: KeyboardShortcut[]) {
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // Ignorer si on est dans un input ou textarea
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
-      return;
-    }
-
-    for (const shortcut of shortcuts) {
-      const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
-      const ctrlMatch = shortcut.ctrlKey === undefined || event.ctrlKey === shortcut.ctrlKey;
-      const shiftMatch = shortcut.shiftKey === undefined || event.shiftKey === shortcut.shiftKey;
-      const altMatch = shortcut.altKey === undefined || event.altKey === shortcut.altKey;
-      const metaMatch = shortcut.metaKey === undefined || event.metaKey === shortcut.metaKey;
-
-      if (keyMatch && ctrlMatch && shiftMatch && altMatch && metaMatch) {
-        event.preventDefault();
-        shortcut.action();
-        break;
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      // Ignorer si on est dans un input ou textarea
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
+        return;
       }
-    }
-  }, [shortcuts]);
+
+      for (const shortcut of shortcuts) {
+        const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
+        const ctrlMatch =
+          shortcut.ctrlKey === undefined || event.ctrlKey === shortcut.ctrlKey;
+        const shiftMatch =
+          shortcut.shiftKey === undefined ||
+          event.shiftKey === shortcut.shiftKey;
+        const altMatch =
+          shortcut.altKey === undefined || event.altKey === shortcut.altKey;
+        const metaMatch =
+          shortcut.metaKey === undefined || event.metaKey === shortcut.metaKey;
+
+        if (keyMatch && ctrlMatch && shiftMatch && altMatch && metaMatch) {
+          event.preventDefault();
+          shortcut.action();
+          break;
+        }
+      }
+    },
+    [shortcuts]
+  );
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -41,14 +52,14 @@ export function useKeyboardNavigation(shortcuts: KeyboardShortcut[]) {
     // Fonction utilitaire pour formater les raccourcis pour l'affichage
     formatShortcut: (shortcut: KeyboardShortcut): string => {
       const parts: string[] = [];
-      
+
       if (shortcut.ctrlKey) parts.push('Ctrl');
       if (shortcut.shiftKey) parts.push('Shift');
       if (shortcut.altKey) parts.push('Alt');
       if (shortcut.metaKey) parts.push('Cmd');
-      
+
       parts.push(shortcut.key.toUpperCase());
-      
+
       return parts.join(' + ');
     },
   };
@@ -63,7 +74,7 @@ export const APP_SHORTCUTS: KeyboardShortcut[] = [
       const event = new CustomEvent('navigate-tab', { detail: 'activity' });
       window.dispatchEvent(event);
     },
-    description: 'Aller à l\'onglet Activity',
+    description: "Aller à l'onglet Activity",
   },
   {
     key: '2',
@@ -72,7 +83,7 @@ export const APP_SHORTCUTS: KeyboardShortcut[] = [
       const event = new CustomEvent('navigate-tab', { detail: 'prompts' });
       window.dispatchEvent(event);
     },
-    description: 'Aller à l\'onglet Personalize',
+    description: "Aller à l'onglet Personalize",
   },
   {
     key: '3',
@@ -81,7 +92,7 @@ export const APP_SHORTCUTS: KeyboardShortcut[] = [
       const event = new CustomEvent('navigate-tab', { detail: 'settings' });
       window.dispatchEvent(event);
     },
-    description: 'Aller à l\'onglet Settings',
+    description: "Aller à l'onglet Settings",
   },
   {
     key: 'c',
@@ -91,7 +102,7 @@ export const APP_SHORTCUTS: KeyboardShortcut[] = [
       const event = new CustomEvent('capture-screen');
       window.dispatchEvent(event);
     },
-    description: 'Capturer l\'écran',
+    description: "Capturer l'écran",
   },
   {
     key: 'g',
@@ -130,6 +141,6 @@ export const APP_SHORTCUTS: KeyboardShortcut[] = [
       const event = new CustomEvent('show-help');
       window.dispatchEvent(event);
     },
-    description: 'Afficher l\'aide',
+    description: "Afficher l'aide",
   },
-]; 
+];

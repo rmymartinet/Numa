@@ -4,7 +4,12 @@ import React from 'react';
 export interface UserPreferences {
   activeTab: 'activity' | 'prompts' | 'settings';
   activeSettingsTab: 'settings' | 'app' | 'profile' | 'security' | 'billing';
-  selectedPromptStyle: 'school' | 'meetings' | 'sales' | 'recruiting' | 'custom';
+  selectedPromptStyle:
+    | 'school'
+    | 'meetings'
+    | 'sales'
+    | 'recruiting'
+    | 'custom';
   defaultModel: 'gpt-4o' | 'gpt-4' | 'gpt-3.5-turbo';
   theme: 'light' | 'dark' | 'auto';
   autoSave: boolean;
@@ -124,20 +129,24 @@ export const useLocalStorage = <T>(key: string, defaultValue: T) => {
     loadValue();
   }, [key, defaultValue]);
 
-  const updateValue = React.useCallback(async (newValue: T) => {
-    try {
-      await storageManager.setItem(key, newValue);
-      setValue(newValue);
-    } catch (error) {
-      console.error(`Erreur lors de la sauvegarde de ${key}:`, error);
-    }
-  }, [key]);
+  const updateValue = React.useCallback(
+    async (newValue: T) => {
+      try {
+        await storageManager.setItem(key, newValue);
+        setValue(newValue);
+      } catch (error) {
+        console.error(`Erreur lors de la sauvegarde de ${key}:`, error);
+      }
+    },
+    [key]
+  );
 
   return [value, updateValue, isLoading] as const;
 };
 
 export const usePreferences = () => {
-  const [preferences, setPreferences] = React.useState<UserPreferences>(DEFAULT_PREFERENCES);
+  const [preferences, setPreferences] =
+    React.useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -156,14 +165,17 @@ export const usePreferences = () => {
     loadPreferences();
   }, []);
 
-  const updatePreferences = React.useCallback(async (updates: Partial<UserPreferences>) => {
-    try {
-      await storageManager.setPreferences(updates);
-      setPreferences(prev => ({ ...prev, ...updates }));
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des préférences:', error);
-    }
-  }, []);
+  const updatePreferences = React.useCallback(
+    async (updates: Partial<UserPreferences>) => {
+      try {
+        await storageManager.setPreferences(updates);
+        setPreferences(prev => ({ ...prev, ...updates }));
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde des préférences:', error);
+      }
+    },
+    []
+  );
 
   return [preferences, updatePreferences, isLoading] as const;
-}; 
+};

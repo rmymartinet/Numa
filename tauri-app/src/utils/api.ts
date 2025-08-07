@@ -33,7 +33,8 @@ export interface NetworkError {
 
 // Fonction utilitaire pour calculer le délai de retry
 function calculateRetryDelay(attempt: number, config: RetryConfig): number {
-  const delay = config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1);
+  const delay =
+    config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1);
   return Math.min(delay, config.maxDelay);
 }
 
@@ -42,7 +43,7 @@ function analyzeNetworkError(error: any): NetworkError {
   if (error.name === 'AbortError' || error.message.includes('timeout')) {
     return {
       type: NetworkErrorType.TIMEOUT,
-      message: 'Délai d\'attente dépassé',
+      message: "Délai d'attente dépassé",
     };
   }
 
@@ -94,7 +95,7 @@ export async function fetchWithRetry<T>(
   for (let attempt = 1; attempt <= retryConfig.maxRetries; attempt++) {
     try {
       logger.info(`Tentative ${attempt}/${retryConfig.maxRetries}`, { url });
-      
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
@@ -106,7 +107,9 @@ export async function fetchWithRetry<T>(
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const error = new Error(
+          `HTTP ${response.status}: ${response.statusText}`
+        );
         (error as any).status = response.status;
         (error as any).headers = response.headers;
         throw error;
@@ -115,10 +118,9 @@ export async function fetchWithRetry<T>(
       const data = await response.json();
       logger.info(`Requête réussie après ${attempt} tentative(s)`, { url });
       return data;
-
     } catch (error: any) {
       lastError = analyzeNetworkError(error);
-      
+
       logger.warn(`Tentative ${attempt} échouée`, {
         url,
         error: lastError,
@@ -126,7 +128,10 @@ export async function fetchWithRetry<T>(
       });
 
       // Ne pas retry pour certaines erreurs
-      if (lastError.type === NetworkErrorType.NETWORK_ERROR && lastError.status === 400) {
+      if (
+        lastError.type === NetworkErrorType.NETWORK_ERROR &&
+        lastError.status === 400
+      ) {
         throw lastError;
       }
 
@@ -142,9 +147,12 @@ export async function fetchWithRetry<T>(
 
       // Calculer le délai de retry
       let delay = calculateRetryDelay(attempt, retryConfig);
-      
+
       // Utiliser retry-after si disponible
-      if (lastError.type === NetworkErrorType.RATE_LIMIT && lastError.retryAfter) {
+      if (
+        lastError.type === NetworkErrorType.RATE_LIMIT &&
+        lastError.retryAfter
+      ) {
         delay = lastError.retryAfter * 1000;
       }
 
@@ -167,4 +175,4 @@ export function useApiWithRetry() {
   };
 
   return { makeRequest };
-} 
+}

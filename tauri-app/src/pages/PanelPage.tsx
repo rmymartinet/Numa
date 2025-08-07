@@ -23,18 +23,17 @@ const PanelPage: React.FC = () => {
   };
 
   return (
-     
-      <DropdownPanel
-        isExpanded={true}
-        activeTab={activeTab}
-        isDark={isDark}
-        isProcessing={isProcessing}
-        extractedText={extractedText}
-        shortcutStatus={shortcutStatus}
-        onTabChange={handleTabChange}
-        onToggleTheme={toggleTheme}
-        onCapture={handleCapture}
-      />
+    <DropdownPanel
+      isExpanded={true}
+      activeTab={activeTab}
+      isDark={isDark}
+      isProcessing={isProcessing}
+      extractedText={extractedText}
+      shortcutStatus={shortcutStatus}
+      onTabChange={handleTabChange}
+      onToggleTheme={toggleTheme}
+      onCapture={handleCapture}
+    />
   );
 };
 

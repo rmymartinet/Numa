@@ -106,7 +106,9 @@ describe('StorageManager', () => {
 
   describe('clear', () => {
     it('should clear all numa items from localStorage', async () => {
-      Object.keys = vi.fn().mockReturnValue(['numa_test1', 'other_key', 'numa_test2']);
+      Object.keys = vi
+        .fn()
+        .mockReturnValue(['numa_test1', 'other_key', 'numa_test2']);
 
       await storageManager.clear();
 
@@ -115,4 +117,4 @@ describe('StorageManager', () => {
       expect(mockLocalStorage.removeItem).not.toHaveBeenCalledWith('other_key');
     });
   });
-}); 
+});

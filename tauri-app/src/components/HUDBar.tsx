@@ -22,7 +22,7 @@ const HUDBar: React.FC<HUDBarProps> = ({
   onCapture,
   onInputChange,
   onTogglePanel,
-  onClose
+  onClose,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -39,14 +39,15 @@ const HUDBar: React.FC<HUDBarProps> = ({
     if (e.target instanceof HTMLButtonElement) {
       return;
     }
-    
-    if (e.button === 0) { // Clic gauche seulement
+
+    if (e.button === 0) {
+      // Clic gauche seulement
       invoke('start_window_dragging').catch(console.error);
     }
   };
 
   return (
-    <div 
+    <div
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -63,32 +64,27 @@ const HUDBar: React.FC<HUDBarProps> = ({
         pointerEvents: 'auto',
         cursor: 'grab',
         zIndex: 1000,
-        userSelect: 'none'
+        userSelect: 'none',
       }}
       onMouseDown={handleMouseDown}
     >
-      <CaptureButton 
-        isListening={isListening}
-        onCapture={onCapture}
+      <CaptureButton isListening={isListening} onCapture={onCapture} />
+
+      <InputField ref={inputRef} value={inputText} onChange={onInputChange} />
+
+      <div
+        style={{
+          width: '1px',
+          height: '24px',
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        }}
       />
-      
-      <InputField 
-        ref={inputRef}
-        value={inputText}
-        onChange={onInputChange}
-      />
-      
-      <div style={{
-        width: '1px',
-        height: '24px',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)'
-      }} />
-      
-      <TogglePanelButton 
+
+      <TogglePanelButton
         isExpanded={isPanelExpanded}
         onToggle={onTogglePanel}
       />
-      
+
       <CloseButton onClose={onClose} />
     </div>
   );

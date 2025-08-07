@@ -12,7 +12,9 @@ export function useTheme() {
       let newTheme: 'light' | 'dark';
 
       if (theme === 'auto') {
-        newTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        newTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light';
       } else {
         newTheme = theme;
       }
@@ -53,4 +55,4 @@ export function useTheme() {
     setTheme: setSpecificTheme,
     isDark: resolvedTheme === 'dark',
   };
-} 
+}

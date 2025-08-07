@@ -24,9 +24,12 @@ export function usePWA() {
 
   // Vérifier si l'app est installée
   const checkInstallation = useCallback(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInstalled = isStandalone || (window.navigator as any).standalone === true;
-    
+    const isStandalone = window.matchMedia(
+      '(display-mode: standalone)'
+    ).matches;
+    const isInstalled =
+      isStandalone || (window.navigator as any).standalone === true;
+
     setPwaState(prev => ({
       ...prev,
       isInstalled,
@@ -38,7 +41,7 @@ export function usePWA() {
   const handleBeforeInstallPrompt = useCallback((event: Event) => {
     event.preventDefault();
     const promptEvent = event as PWAInstallPromptEvent;
-    
+
     setPwaState(prev => ({
       ...prev,
       isInstallable: true,
@@ -67,14 +70,14 @@ export function usePWA() {
   // Installer l'app
   const installApp = useCallback(async () => {
     if (!pwaState.deferredPrompt) {
-      console.warn('Aucune invite d\'installation disponible');
+      console.warn("Aucune invite d'installation disponible");
       return false;
     }
 
     try {
       pwaState.deferredPrompt.prompt();
       const { outcome } = await pwaState.deferredPrompt.userChoice;
-      
+
       if (outcome === 'accepted') {
         setPwaState(prev => ({
           ...prev,
@@ -85,7 +88,7 @@ export function usePWA() {
       }
       return false;
     } catch (error) {
-      console.error('Erreur lors de l\'installation:', error);
+      console.error("Erreur lors de l'installation:", error);
       return false;
     }
   }, [pwaState.deferredPrompt]);
@@ -96,23 +99,29 @@ export function usePWA() {
       try {
         const registration = await navigator.serviceWorker.register('/sw.js');
         console.log('Service Worker enregistré:', registration);
-        
+
         // Vérifier les mises à jour
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              if (
+                newWorker.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
                 // Nouvelle version disponible
                 console.log('Nouvelle version disponible');
               }
             });
           }
         });
-        
+
         return registration;
       } catch (error) {
-        console.error('Erreur lors de l\'enregistrement du Service Worker:', error);
+        console.error(
+          "Erreur lors de l'enregistrement du Service Worker:",
+          error
+        );
         return null;
       }
     }
@@ -146,12 +155,21 @@ export function usePWA() {
     }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        'beforeinstallprompt',
+        handleBeforeInstallPrompt
+      );
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('online', handleOnlineStatusChange);
       window.removeEventListener('offline', handleOnlineStatusChange);
     };
-  }, [checkInstallation, registerServiceWorker, handleBeforeInstallPrompt, handleAppInstalled, handleOnlineStatusChange]);
+  }, [
+    checkInstallation,
+    registerServiceWorker,
+    handleBeforeInstallPrompt,
+    handleAppInstalled,
+    handleOnlineStatusChange,
+  ]);
 
   return {
     ...pwaState,

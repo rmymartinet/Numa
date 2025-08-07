@@ -1,6 +1,4 @@
-import React, { useCallback, useEffect } from 'react';  
-
-import { useEffect } from "react";
+import React, { useCallback, useEffect } from 'react';
 
 // Error Tracker pour Numa
 
@@ -51,7 +49,7 @@ class ErrorTracker {
 
   private setupGlobalHandlers(): void {
     // Intercepter les erreurs JavaScript
-    window.addEventListener('error', (event) => {
+    window.addEventListener('error', event => {
       this.trackError(event.error || new Error(event.message), {
         type: 'error',
         metadata: {
@@ -63,7 +61,7 @@ class ErrorTracker {
     });
 
     // Intercepter les promesses rejetées
-    window.addEventListener('unhandledrejection', (event) => {
+    window.addEventListener('unhandledrejection', event => {
       this.trackError(new Error(event.reason), {
         type: 'error',
         metadata: {
@@ -110,8 +108,12 @@ class ErrorTracker {
       // Informations sur les performances
       if (performance.timing) {
         context.performance = {
-          loadTime: performance.timing.loadEventEnd - performance.timing.navigationStart,
-          domContentLoaded: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart,
+          loadTime:
+            performance.timing.loadEventEnd -
+            performance.timing.navigationStart,
+          domContentLoaded:
+            performance.timing.domContentLoadedEventEnd -
+            performance.timing.navigationStart,
         };
       }
     }
@@ -119,7 +121,12 @@ class ErrorTracker {
     return context;
   }
 
-  trackError(error: Error, options: { type: ErrorEvent['type']; metadata?: Record<string, any> } = { type: 'error' }): void {
+  trackError(
+    error: Error,
+    options: { type: ErrorEvent['type']; metadata?: Record<string, any> } = {
+      type: 'error',
+    }
+  ): void {
     const errorEvent: ErrorEvent = {
       id: this.generateId(),
       timestamp: Date.now(),
@@ -226,17 +233,26 @@ export const errorTracker = new ErrorTracker({
 
 // Hook React pour le tracking d'erreurs
 export function useErrorTracking() {
-  const trackError = useCallback((error: Error, metadata?: Record<string, any>) => {
-    errorTracker.trackError(error, { type: 'error', metadata });
-  }, []);
+  const trackError = useCallback(
+    (error: Error, metadata?: Record<string, any>) => {
+      errorTracker.trackError(error, { type: 'error', metadata });
+    },
+    []
+  );
 
-  const trackWarning = useCallback((message: string, metadata?: Record<string, any>) => {
-    errorTracker.trackWarning(message, metadata);
-  }, []);
+  const trackWarning = useCallback(
+    (message: string, metadata?: Record<string, any>) => {
+      errorTracker.trackWarning(message, metadata);
+    },
+    []
+  );
 
-  const trackInfo = useCallback((message: string, metadata?: Record<string, any>) => {
-    errorTracker.trackInfo(message, metadata);
-  }, []);
+  const trackInfo = useCallback(
+    (message: string, metadata?: Record<string, any>) => {
+      errorTracker.trackInfo(message, metadata);
+    },
+    []
+  );
 
   return {
     trackError,

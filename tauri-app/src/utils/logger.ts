@@ -48,14 +48,24 @@ class Logger {
     return LOG_LEVELS[level] >= LOG_LEVELS[this.config.level];
   }
 
-  private formatMessage(level: LogLevel, message: string, data?: any, context?: string): string {
+  private formatMessage(
+    level: LogLevel,
+    message: string,
+    data?: any,
+    context?: string
+  ): string {
     const timestamp = new Date().toISOString();
     const contextStr = context ? `[${context}]` : '';
     const dataStr = data ? ` ${JSON.stringify(data)}` : '';
     return `${timestamp} ${level.toUpperCase()}${contextStr}: ${message}${dataStr}`;
   }
 
-  private addLog(level: LogLevel, message: string, data?: any, context?: string): void {
+  private addLog(
+    level: LogLevel,
+    message: string,
+    data?: any,
+    context?: string
+  ): void {
     if (!this.shouldLog(level)) return;
 
     const entry: LogEntry = {
@@ -75,7 +85,12 @@ class Logger {
 
     // Console output
     if (this.config.enableConsole) {
-      const formattedMessage = this.formatMessage(level, message, data, context);
+      const formattedMessage = this.formatMessage(
+        level,
+        message,
+        data,
+        context
+      );
       switch (level) {
         case 'debug':
           console.debug(formattedMessage);
@@ -137,15 +152,17 @@ class Logger {
   // Méthodes utilitaires
   getLogs(level?: LogLevel, limit?: number): LogEntry[] {
     let filtered = this.logs;
-    
+
     if (level) {
-      filtered = filtered.filter(log => LOG_LEVELS[log.level] >= LOG_LEVELS[level]);
+      filtered = filtered.filter(
+        log => LOG_LEVELS[log.level] >= LOG_LEVELS[level]
+      );
     }
-    
+
     if (limit) {
       filtered = filtered.slice(-limit);
     }
-    
+
     return filtered;
   }
 
@@ -189,22 +206,36 @@ export const logger = new Logger();
 // Hook React pour utiliser le logger
 export const useLogger = (context?: string) => {
   return {
-    debug: (message: string, data?: any) => logger.debug(message, data, context),
+    debug: (message: string, data?: any) =>
+      logger.debug(message, data, context),
     info: (message: string, data?: any) => logger.info(message, data, context),
     warn: (message: string, data?: any) => logger.warn(message, data, context),
-    error: (message: string, data?: any) => logger.error(message, data, context),
+    error: (message: string, data?: any) =>
+      logger.error(message, data, context),
   };
 };
 
 // Fonction utilitaire pour logger les erreurs
 export const logError = (error: Error, context?: string): void => {
-  logger.error(error.message, {
-    stack: error.stack,
-    name: error.name,
-  }, context);
+  logger.error(
+    error.message,
+    {
+      stack: error.stack,
+      name: error.name,
+    },
+    context
+  );
 };
 
 // Fonction utilitaire pour logger les performances
-export const logPerformance = (operation: string, duration: number, context?: string): void => {
-  logger.info(`Performance: ${operation}`, { duration: `${duration}ms` }, context);
-}; 
+export const logPerformance = (
+  operation: string,
+  duration: number,
+  context?: string
+): void => {
+  logger.info(
+    `Performance: ${operation}`,
+    { duration: `${duration}ms` },
+    context
+  );
+};

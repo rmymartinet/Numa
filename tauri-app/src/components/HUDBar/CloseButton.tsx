@@ -27,13 +27,13 @@ const CloseButton: React.FC<CloseButtonProps> = ({ onClose }) => {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         fontSize: '18px',
-        fontWeight: 'bold'
+        fontWeight: 'bold',
       }}
-      onMouseEnter={(e) => {
+      onMouseEnter={e => {
         e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 1)'; // Rouge plus foncé
         e.currentTarget.style.transform = 'scale(1.1)';
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={e => {
         e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.8)';
         e.currentTarget.style.transform = 'scale(1)';
       }}
