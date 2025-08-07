@@ -1,6 +1,5 @@
 import React from 'react';
 import { LazyActivityContent, LazyPersonalizeContent, LazySettingsContent } from './LazyComponents';
-import LoadingSpinner from './LoadingSpinner';
 import PanelSidebar from './DropdownPanel/PanelSidebar';
 import PanelHeader from './DropdownPanel/PanelHeader';
 import CaptureTab from './DropdownPanel/CaptureTab';

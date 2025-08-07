@@ -1,7 +1,6 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainHUDPage from './pages/MainHUDPage';
-import BlankPage from './pages/BlankPage';
 import PanelPage from './pages/PanelPage';
 
 const AppWithRouter: React.FC = () => {

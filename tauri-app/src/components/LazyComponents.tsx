@@ -1,77 +1,80 @@
-import React, { Suspense, lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
-// Wrapper pour le lazy loading avec fallback
-interface LazyComponentWrapperProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
-}
+// Composants lazy avec preloading intelligent
+const ActivityContent = lazy(() => 
+  import('./ActivityContent').then(module => ({
+    default: module.default
+  }))
+);
 
-export const LazyComponentWrapper: React.FC<LazyComponentWrapperProps> = ({
-  children,
-  fallback = <LoadingSpinner text="Chargement..." variant="dots" />
+const PersonalizeContent = lazy(() => 
+  import('./PersonalizeContent').then(module => ({
+    default: module.default
+  }))
+);
+
+const SettingsContent = lazy(() => 
+  import('./SettingsContent').then(module => ({
+    default: module.default
+  }))
+);
+
+// Wrapper avec Suspense optimisé
+const LazyWrapper: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ 
+  children, 
+  fallback = <LoadingSpinner size="sm" /> 
 }) => (
   <Suspense fallback={fallback}>
     {children}
   </Suspense>
 );
 
-// Composants lazy-loaded avec type assertion
-const ActivityContent = lazy(() => 
-  import('./ActivityContent').then(module => ({ default: module.default as React.ComponentType }))
-);
-
-const PersonalizeContent = lazy(() => 
-  import('./PersonalizeContent').then(module => ({ default: module.default as React.ComponentType }))
-);
-
-const SettingsContent = lazy(() => 
-  import('./SettingsContent').then(module => ({ default: module.default as React.ComponentType }))
-);
-
-// Composants spécifiques pour chaque onglet
+// Composants exportés avec preloading
 export const LazyActivityContent: React.FC = () => (
-  <LazyComponentWrapper>
+  <LazyWrapper>
     <ActivityContent />
-  </LazyComponentWrapper>
+  </LazyWrapper>
 );
 
 export const LazyPersonalizeContent: React.FC = () => (
-  <LazyComponentWrapper>
+  <LazyWrapper>
     <PersonalizeContent />
-  </LazyComponentWrapper>
+  </LazyWrapper>
 );
 
 export const LazySettingsContent: React.FC = () => (
-  <LazyComponentWrapper>
+  <LazyWrapper>
     <SettingsContent />
-  </LazyComponentWrapper>
+  </LazyWrapper>
 );
 
-// Hook pour le lazy loading conditionnel
-export function useLazyLoad<T>(
-  importFn: () => Promise<T>,
-  deps: React.DependencyList = []
-): T | null {
-  const [module, setModule] = React.useState<T | null>(null);
-  const [loading, setLoading] = React.useState(true);
+// Fonctions de preloading pour optimiser les performances
+export const preloadActivityContent = () => {
+  import('./ActivityContent');
+};
 
-  React.useEffect(() => {
-    setLoading(true);
-    importFn()
-      .then((module) => {
-        setModule(module);
-      })
-      .catch((error) => {
-        console.error('Erreur lors du chargement lazy:', error);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, deps);
+export const preloadPersonalizeContent = () => {
+  import('./PersonalizeContent');
+};
 
-  return loading ? null : module;
-}
+export const preloadSettingsContent = () => {
+  import('./SettingsContent');
+};
+
+// Hook pour le preloading intelligent
+export const usePreloadComponents = () => {
+  const preloadAll = React.useCallback(() => {
+    // Preload tous les composants en arrière-plan
+    Promise.all([
+      preloadActivityContent(),
+      preloadPersonalizeContent(),
+      preloadSettingsContent()
+    ]).catch(console.error);
+  }, []);
+
+  return { preloadAll };
+};
 
 // Composant pour le lazy loading d'images
 export const LazyImage: React.FC<{

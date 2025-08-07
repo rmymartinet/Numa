@@ -5,9 +5,8 @@ import Tesseract from 'tesseract.js';
 import { usePreferences } from '../utils/storage';
 import { useLogger, logError, logPerformance } from '../utils/logger';
 import { useTheme } from '../hooks/useTheme';
-import { useKeyboardNavigation, APP_SHORTCUTS } from '../hooks/useKeyboardNavigation';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import HUDBar from '../components/HUDBar';
-import DropdownPanel from '../components/DropdownPanel';
 
 import './MainHUDPage.css';
 
@@ -22,15 +21,14 @@ const MainHUDPage: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // États de l'application principale
-  const [shortcutStatus, setShortcutStatus] = useState<string>("");
-  const [screenshotPath, setScreenshotPath] = useState<string>("");
-  const [extractedText, setExtractedText] = useState<string>("");
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [shortcutStatus, setShortcutStatus] = useState<string>(""); // Utilisé dans les event listeners
+  const [screenshotPath, setScreenshotPath] = useState<string>(""); // Utilisé dans handleCapture
+  const [extractedText, setExtractedText] = useState<string>(""); // Utilisé dans runOCR
+  const [isProcessing, setIsProcessing] = useState<boolean>(false); // Utilisé dans handleCapture
   const [preferences, updatePreferences] = usePreferences();
-  const [activeTab, setActiveTab] = useState<TabType>(preferences.activeTab);
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<TabType>(preferences.activeTab); // Utilisé dans handleTabChange
   const logger = useLogger('MainHUDPage');
-  const { toggleTheme, isDark } = useTheme();
+  const { toggleTheme } = useTheme();
 
     // Gestion des onglets
   const handleTabChange = (tab: TabType) => {

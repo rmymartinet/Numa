@@ -6,9 +6,9 @@ type TabType = 'activity' | 'prompts' | 'settings';
 const BlankPage: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<TabType>('activity');
   const [isDark, setIsDark] = React.useState(false);
-  const [isProcessing, setIsProcessing] = React.useState(false);
-  const [extractedText, setExtractedText] = React.useState('');
-  const [shortcutStatus, setShortcutStatus] = React.useState('');
+  const [isProcessing] = React.useState(false);
+  const [extractedText] = React.useState('');
+  const [shortcutStatus] = React.useState('');
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);

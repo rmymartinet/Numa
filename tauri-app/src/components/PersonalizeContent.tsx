@@ -2,7 +2,7 @@ import React from 'react';
 import PromptCard from './PromptCard';
 
 const PersonalizeContent: React.FC = () => {
-  const [selectedStyle, setSelectedStyle] = React.useState<'school' | 'meetings' | 'sales' | 'recruiting' | 'custom'>('meetings');
+  const [selectedStyle] = React.useState<'school' | 'meetings' | 'sales' | 'recruiting' | 'custom'>('meetings');
 
   const promptStyles = [
     {

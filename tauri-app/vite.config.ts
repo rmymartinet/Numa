@@ -1,13 +1,47 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { resolve } from "path";
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [react(), tailwindcss()],
+
+  // Optimisations de build
+  build: {
+    target: 'esnext',
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['framer-motion', 'lucide-react'],
+          ocr: ['tesseract.js']
+        }
+      }
+    },
+
+  },
+
+  // Optimisations de développement
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+    exclude: ['@tauri-apps/api']
+  },
+
+  // Alias pour les imports
+  resolve: {
+    alias: {
+      '@': resolve(process.cwd(), 'src'),
+      '@components': resolve(process.cwd(), 'src/components'),
+      '@pages': resolve(process.cwd(), 'src/pages'),
+      '@utils': resolve(process.cwd(), 'src/utils'),
+      '@hooks': resolve(process.cwd(), 'src/hooks')
+    }
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -30,4 +64,4 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-}));
+});
