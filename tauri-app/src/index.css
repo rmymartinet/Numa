@@ -4,4 +4,48 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+html {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Supprimer les bordures par défaut */
+* {
+  box-sizing: border-box;
+}
+
+/* Supprimer tous les contours et bordures */
+html, body {
+  border: none !important;
+  outline: none !important;
+}
+
+/* Supprimer les contours de focus */
+*:focus {
+  outline: none !important;
+  border: none !important;
+}
+
+/* Supprimer les bordures de fenêtre */
+#root {
+  border: none !important;
+  outline: none !important;
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+
+/* Supprimer toutes les scrollbars */
+::-webkit-scrollbar {
+  display: none !important;
+}
+
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 } 

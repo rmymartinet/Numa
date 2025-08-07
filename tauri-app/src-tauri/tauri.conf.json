@@ -5,7 +5,7 @@
   "identifier": "com.martinet.veil",
                 "build": {
                 "beforeDevCommand": "",
-                "devUrl": "http://localhost:1420/hud",
+                "devUrl": "http://localhost:1420",
                 "beforeBuildCommand": "npm run build",
                 "frontendDist": "../dist"
               },
@@ -15,11 +15,12 @@
                     "title": "Numa - AI Assistant",
                     "label": "hud",
                     "width": 1100,
-                    "height": 800,
+                    "height": 600,                    
                     "resizable": true,
                     "decorations": false,
                     "minimizable": true,
                     "transparent": true,
+                    "titleBarStyle": "Overlay",
                     "alwaysOnTop": true,
                     "skipTaskbar": false,
                     "visible": true,

@@ -1,6 +1,6 @@
 import React from 'react';
 import ActivityItem from './ActivityItem';
-import { ACTIVITIES_DATA } from '../App';
+import { ACTIVITIES_DATA } from '../data/activitiesData';
 
 const ActivityContent: React.FC = () => {
   return (

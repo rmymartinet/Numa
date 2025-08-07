@@ -7,3 +7,17 @@
 .hud-no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Supprimer tous les contours */
+.hud-container {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Supprimer les contours de la fenêtre */
+body, html, #root {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
