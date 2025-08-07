@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2.7", features = ["macos-private-api"] }
+tauri = { version = "2.7", features = ["macos-private-api", "test"] }
 tauri-plugin-opener = "2"
 # tauri-plugin-global-shortcut = "2"  # Temporairement désactivé - API instable
 screenshots = "0.8"
@@ -36,5 +36,9 @@ windows = { version = "0.48", features = ["Win32_UI_WindowsAndMessaging"] }
 objc = "0.2"
 core-graphics = "0.23"
 cocoa = "0.25"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+tempfile = "3.8"
 
 

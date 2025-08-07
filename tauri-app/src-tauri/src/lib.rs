@@ -1,8 +1,10 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 mod stealth;
+#[cfg(test)]
+mod tests;
 
-use tauri::{AppHandle, Manager, LogicalPosition, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
 
 
 fn capture_screen_internal() -> Result<String, String> {
@@ -174,7 +176,7 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 #[tauri::command]
 fn panel_show(app: AppHandle) -> tauri::Result<()> {
     ensure_panel(&app)?;
-    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let _hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let panel = app.get_webview_window("panel").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Panel window not found")))?;
 
     ghost_panel(&panel, false)?; // redeviens visible / interactif
