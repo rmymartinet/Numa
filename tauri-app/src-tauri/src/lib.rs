@@ -157,8 +157,17 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
         use objc::runtime::Object;
         let hud_ns:   *mut Object = hud.ns_window()? as *mut Object;
         let panel_ns: *mut Object = panel.ns_window()? as *mut Object;
-        // NSWindowAbove == 1
+        
+        // D'abord, essayer de retirer le panel s'il était déjà attaché
+        let _: () = msg_send![hud_ns, removeChildWindow:panel_ns];
+        
+        // Attendre un peu pour que la suppression soit effective
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        
+        // Puis re-attacher
         let _: () = msg_send![hud_ns, addChildWindow:panel_ns ordered:1];
+        
+        println!("Panel re-attaché au HUD avec succès");
     }
 
     println!("Panel affiché et re-attaché au HUD");
