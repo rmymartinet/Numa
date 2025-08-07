@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.tauri.app/acl/capability",
+  "identifier": "overlay",
+  "windows": ["overlay", "Numa"],
+  "permissions": [
+    "core:window:allow-create",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-ignore-cursor-events"
+  ]
+} 

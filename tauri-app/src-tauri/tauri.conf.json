@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "tauri-app",
+  "version": "0.1.0",
+  "identifier": "com.martinet.veil",
+                "build": {
+                "beforeDevCommand": "",
+                "devUrl": "http://localhost:1420",
+                "beforeBuildCommand": "npm run build",
+                "frontendDist": "../dist"
+              },
+    "app": {
+                    "windows": [
+                  {
+                    "title": "Numa - Capture d'écran intelligente",
+                    "label": "Numa",
+                    "width": 1200,
+                    "height": 800,
+                    "resizable": false,
+                    "decorations": true,
+                    "minimizable": true,
+                    "transparent": false,
+                    "alwaysOnTop": false,
+                    "skipTaskbar": false,
+                    "visible": true,
+                    "center": true
+                  }
+                ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    },
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
