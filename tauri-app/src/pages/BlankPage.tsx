@@ -24,17 +24,27 @@ const BlankPage: React.FC = () => {
   };
 
   return (
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      paddingTop: '20px'
+    }}>
       <DropdownPanel
-    isExpanded={true}
-    activeTab={activeTab}
-    isDark={isDark}
-    isProcessing={isProcessing}
-    extractedText={extractedText}
-    shortcutStatus={shortcutStatus}
-    onTabChange={handleTabChange}
-    onToggleTheme={toggleTheme}
-    onCapture={handleCapture}
-  />
+        isExpanded={true}
+        activeTab={activeTab}
+        isDark={isDark}
+        isProcessing={isProcessing}
+        extractedText={extractedText}
+        shortcutStatus={shortcutStatus}
+        onTabChange={handleTabChange}
+        onToggleTheme={toggleTheme}
+        onCapture={handleCapture}
+      />
+    </div>
   );
 };
 

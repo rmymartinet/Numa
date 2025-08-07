@@ -25,22 +25,7 @@
                     "skipTaskbar": true,
                     "visible": true,
                     "center": true,
-                    "closable": true
-                  },
-                  {
-                    "title": "Numa Panel",
-                    "label": "panel",
-                    "url": "http://localhost:1420/#/blank",
-                    "width": 1050,   
-                    "height": 600,   
-                    "resizable": false,
-                    "decorations": false,
-                    "minimizable": false,
-                    "transparent": true,
-                    "alwaysOnTop": true,
-                    "skipTaskbar": true,
-                    "visible": false,
-                    "closable": false
+                                        "closable": true
                   }
                 ],
     "security": {

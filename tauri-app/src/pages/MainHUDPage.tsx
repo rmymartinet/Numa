@@ -84,13 +84,18 @@ const MainHUDPage: React.FC = () => {
   const handleTogglePanel = async () => {
     console.log('Toggle panel clicked, current state:', isPanelExpanded);
     const newState = !isPanelExpanded;
+    console.log('Nouvel état:', newState);
     setIsPanelExpanded(newState);
     
     try {
       if (newState) {
-        await invoke('panel_show', { passthrough: false });
+        console.log('Appel de panel_show');
+        await invoke('panel_show');
+        console.log('panel_show appelé avec succès');
       } else {
+        console.log('Appel de panel_hide');
         await invoke('panel_hide');
+        console.log('panel_hide appelé avec succès');
       }
     } catch (error) {
       console.error('Erreur toggle panel:', error);
@@ -231,7 +236,7 @@ const MainHUDPage: React.FC = () => {
           onClose={handleClose}
         />
       </div>
-      
+
 
     </div>
   );

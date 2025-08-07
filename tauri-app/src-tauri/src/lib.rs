@@ -104,23 +104,68 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
     Ok(())
 }
 
-#[tauri::command]
-fn panel_show(app: AppHandle, passthrough: bool) -> tauri::Result<()> {
-    if let (Some(hud), Some(panel)) = (app.get_webview_window("hud"),
-                                       app.get_webview_window("panel")) {
-        if let Ok(pos) = hud.outer_position() {
-            panel.set_position(tauri::LogicalPosition::new(pos.x, pos.y + 64))?;
-        }
-        panel.set_ignore_cursor_events(passthrough)?;
-        panel.show()?;
-    }
+fn ensure_panel(app: &tauri::AppHandle) -> tauri::Result<()> {
+    // Si déjà créé, on sort
+    if app.get_webview_window("panel").is_some() { return Ok(()); }
+
+    let hud = app.get_webview_window("hud").expect("HUD must exist");
+
+    // Position logique du HUD
+    let pos  = hud.outer_position()?;
+    let size = hud.outer_size()?; // logique : 600×64
+
+    println!("Création du panel enfant à la position: ({}, {})", pos.x, pos.y + size.height as i32);
+    println!("HUD position: ({}, {}), taille: {}x{}", pos.x, pos.y, size.width, size.height);
+
+    // Création du child-window
+    println!("Création de la fenêtre panel avec l'URL: http://localhost:1420/#/panel");
+    
+    // Poignée native Cocoa (void*) — only with macos-private-api
+    let parent_ptr = hud.ns_window()?;   // -> *mut std::ffi::c_void
+    println!("Handle natif du HUD récupéré");
+    
+    let panel = tauri::WebviewWindowBuilder::new(
+            app,
+            "panel",
+            tauri::WebviewUrl::External("http://localhost:1420/#/panel".parse().unwrap()),     // route React pour le panneau
+        )
+        .parent_raw(parent_ptr)                 // 🔑 version bas-niveau
+        .decorations(false)
+        .transparent(true)
+        .always_on_top(true)
+        .resizable(false)
+        .inner_size(600f64, 600f64)             // largeur = HUD, hauteur panneau
+        .position(
+            pos.x as f64,
+            (pos.y + size.height as i32) as f64      // juste sous la barre
+        )
+        .visible(false)                         // caché au lancement
+        .build()?;
+    
+    println!("Panel créé comme enfant du HUD");
+
+    // Option : propager le click-through au besoin
+    panel.set_ignore_cursor_events(false)?;
     Ok(())
 }
 
 #[tauri::command]
-fn panel_hide(app: AppHandle) -> tauri::Result<()> {
+fn panel_show(app: tauri::AppHandle) -> tauri::Result<()> {
+    println!("panel_show appelé");
+    ensure_panel(&app)?;                       // la crée une fois
+    let panel = app.get_webview_window("panel").unwrap();
+    panel.show()?;
+    panel.set_focus()?;
+    println!("Panel affiché avec succès");
+    Ok(())
+}
+
+#[tauri::command]
+fn panel_hide(app: tauri::AppHandle) -> tauri::Result<()> {
+    println!("panel_hide appelé");
     if let Some(panel) = app.get_webview_window("panel") {
         panel.hide()?;
+        println!("Panel caché avec succès");
     }
     Ok(())
 }
@@ -141,6 +186,8 @@ pub fn run() {
                 // Fermer complètement l'application
                 window.app_handle().exit(0);
             }
+            
+
         })
         .setup(|app| {
             println!("Application Numa démarrée - Interface unifiée");
