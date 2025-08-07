@@ -96,6 +96,14 @@ fn start_window_dragging(app: AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+#[tauri::command]
+fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
+    if let Some(window) = app.get_webview_window("hud") {
+        window.set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }))?;
+    }
+    Ok(())
+}
+
 
 
 
@@ -104,7 +112,7 @@ fn start_window_dragging(app: AppHandle) -> tauri::Result<()> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![capture_and_analyze, capture_screen, get_image_as_base64, stealth::hide_for_capture, close_all_windows, start_window_dragging])
+        .invoke_handler(tauri::generate_handler![capture_and_analyze, capture_screen, get_image_as_base64, stealth::hide_for_capture, close_all_windows, start_window_dragging, resize_window])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 println!("Fermeture de l'application Numa");

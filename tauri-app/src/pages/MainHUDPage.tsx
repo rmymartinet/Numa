@@ -104,6 +104,8 @@ const MainHUDPage: React.FC = () => {
     }
   }, []);
 
+
+
   // Configuration des event listeners
   useEffect(() => {
     const setupEventListeners = async () => {
@@ -173,6 +175,29 @@ const MainHUDPage: React.FC = () => {
   
   useKeyboardNavigation(shortcuts);
 
+  // Fonction pour redimensionner la fenêtre selon l'approche Cluely
+  const resizeWindowToContent = async () => {
+    try {
+      if (isPanelExpanded) {
+        // Panel ouvert : fenêtre complète comme Cluely
+        console.log('Panel ouvert - Fenêtre complète');
+        await invoke('resize_window', { 
+          width: 1200, // Largeur complète
+          height: 800  // Hauteur complète
+        });
+      } else {
+        // Panel fermé : juste la taille du HUD
+        console.log('Panel fermé - Taille HUD');
+        await invoke('resize_window', { 
+          width: 600, 
+          height: 64 
+        });
+      }
+    } catch (error) {
+      console.error('Erreur redimensionnement:', error);
+    }
+  };
+
   // Debug: Surveiller les changements d'état du panel
   useEffect(() => {
     console.log('Panel expanded state changed to:', isPanelExpanded);
@@ -182,48 +207,82 @@ const MainHUDPage: React.FC = () => {
     } else {
       document.title = 'NUMA - Panel CLOSED';
     }
+    
+    // Redimensionner la fenêtre après un délai pour laisser le DOM se mettre à jour
+    setTimeout(resizeWindowToContent, 300);
   }, [isPanelExpanded]);
 
+  // Redimensionnement initial au démarrage
+  useEffect(() => {
+    const initialResize = () => {
+      setTimeout(resizeWindowToContent, 500);
+    };
+    initialResize();
+  }, []);
+
   return (
-    <div className="hud-container" style={{
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: 'rgba(255, 0, 0, 0.1)', // Debug: fond rouge temporaire
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      padding: '10px',
-      overflow: 'hidden',
-      pointerEvents: 'auto',
-      border: 'none',
-      outline: 'none',
-      position: 'fixed',
-      top: 0,
-      left: 0
-    }}>
-      <HUDBar 
-        isListening={isListening}
-        inputText={inputText}
-        isPanelExpanded={isPanelExpanded}
-        onCapture={handleCapture}
-        onInputChange={setInputText}
-        onTogglePanel={handleTogglePanel}
-        onClose={handleClose}
-      />
+    <div 
+      className="hud-container" 
+      data-hud-content
+      style={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'red',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        overflow: 'hidden',
+        pointerEvents: 'none', // Zone principale traversable
+        border: 'none',
+        outline: 'none',
+        position: 'fixed',
+        top: 0,
+        left: 0
+      }}
+    >
+      {/* HUD Bar - toujours visible */}
+      <div style={{ pointerEvents: 'auto' }} data-hud-bar>
+        <HUDBar 
+          isListening={isListening}
+          inputText={inputText}
+          isPanelExpanded={isPanelExpanded}
+          onCapture={handleCapture}
+          onInputChange={setInputText}
+          onTogglePanel={handleTogglePanel}
+          onClose={handleClose}
+        />
+      </div>
       
-      {/* Test avec DropdownPanel mais sans composants Lazy */}
-      <DropdownPanel 
-        isExpanded={isPanelExpanded}
-        activeTab={activeTab}
-        isDark={isDark}
-        isProcessing={isProcessing}
-        extractedText={extractedText}
-        shortcutStatus={shortcutStatus}
-        onTabChange={handleTabChange}
-        onToggleTheme={toggleTheme}
-        onCapture={handleCapture}
-      />
+      {/* DropdownPanel en pleine taille */}
+      {isPanelExpanded && (
+        <div 
+          style={{ 
+            pointerEvents: 'auto',
+            position: 'absolute',
+            top: '80px', // En dessous du HUD
+            left: '0',
+            right: '0',
+            bottom: '0',
+            display: 'flex',
+            justifyContent: 'center',
+            overflow: 'hidden'
+          }} 
+          data-dropdown-panel
+        >
+          <DropdownPanel 
+            isExpanded={isPanelExpanded}
+            activeTab={activeTab}
+            isDark={isDark}
+            isProcessing={isProcessing}
+            extractedText={extractedText}
+            shortcutStatus={shortcutStatus}
+            onTabChange={handleTabChange}
+            onToggleTheme={toggleTheme}
+            onCapture={handleCapture}
+          />
+        </div>
+      )}
     </div>
   );
 };

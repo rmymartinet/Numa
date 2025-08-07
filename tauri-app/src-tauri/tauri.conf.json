@@ -9,20 +9,19 @@
                 "beforeBuildCommand": "npm run build",
                 "frontendDist": "../dist"
               },
-    "app": {
+                    "app": {
                     "windows": [
                   {
                     "title": "Numa - AI Assistant",
                     "label": "hud",
-                    "width": 1100,
-                    "height": 600,                    
-                    "resizable": true,
+                    "width": 700,
+                    "height": 120,
+                    "resizable": false,
                     "decorations": false,
-                    "minimizable": true,
+                    "minimizable": false,
                     "transparent": true,
-                    "titleBarStyle": "Overlay",
                     "alwaysOnTop": true,
-                    "skipTaskbar": false,
+                    "skipTaskbar": true,
                     "visible": true,
                     "center": true,
                     "closable": true
