@@ -106,21 +106,14 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 
 #[tauri::command]
 fn panel_show(app: AppHandle, passthrough: bool) -> tauri::Result<()> {
-    let Some(hud) = app.get_webview_window("hud") else { return Ok(()); };
-    let Some(panel) = app.get_webview_window("panel") else { return Ok(()); };
-
-    // place le panel centré par rapport au HUD
-    if let Ok(pos) = hud.outer_position() {
-        // HUD: ~500px (réel), Panel: 1200x800
-        // Centrer horizontalement: pos.x + (500-1200)/2 = pos.x - 350
-        // Positionner verticalement: pos.y + 64 (juste en dessous du HUD)
-        let panel_x = pos.x - 350; // Centré horizontalement
-        let panel_y = pos.y + 64;  // Juste en dessous du HUD
-        
-        panel.set_position(tauri::LogicalPosition::new(panel_x, panel_y))?;
+    if let (Some(hud), Some(panel)) = (app.get_webview_window("hud"),
+                                       app.get_webview_window("panel")) {
+        if let Ok(pos) = hud.outer_position() {
+            panel.set_position(tauri::LogicalPosition::new(pos.x, pos.y + 64))?;
+        }
+        panel.set_ignore_cursor_events(passthrough)?;
+        panel.show()?;
     }
-    panel.set_ignore_cursor_events(passthrough)?;
-    panel.show()?;
     Ok(())
 }
 
