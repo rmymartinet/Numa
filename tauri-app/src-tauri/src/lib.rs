@@ -109,7 +109,7 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 
 
 
-const PANEL_W: f64 = 1050.0;
+const PANEL_W: f64 = 1150.0;
 const PANEL_H: f64 = 600.0;
 
 
@@ -133,7 +133,7 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     .always_on_top(true)
     .resizable(false)
     .inner_size(PANEL_W, PANEL_H)
-    .position(0.0, 450.0)                    // 🔑 Delta constant : 0px à gauche, 64px dessous
+    .position(200.0 , 490.0)                
     .visible(false)
     .build()?;
     Ok(panel)
