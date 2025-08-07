@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MainHUD</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #ff6b6b;  /* Fond opaque rouge */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+        }
+        
+        .mainhud-container {
+            width: 400px;
+            height: 300px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .mainhud-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .mainhud-controls {
+            background: rgba(0,0,0,0.8);
+            border-radius: 0 0 12px 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .control-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .control-btn.hide-btn {
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .control-btn.hide-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        
+        .close-btn {
+            background: rgba(255,59,48,0.8);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            color: white;
+            cursor: pointer;
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255,59,48,1);
+        }
+        
+        .icon {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mainhud-container">
+        <div class="mainhud-content">
+            MainHUD - Contrôle principal
+        </div>
+        <div class="mainhud-controls">
+            <button class="control-btn" onclick="capture()">
+                📊 Capture
+            </button>
+            <button class="control-btn" onclick="ask()">
+                💬 I Ask...
+            </button>
+            <button class="control-btn hide-btn" onclick="hideNuma()">
+                ⬆️ Hide
+            </button>
+            <button class="close-btn" onclick="closeHUD()">×</button>
+        </div>
+    </div>
+
+    <script>
+        const { invoke } = window.__TAURI__;
+
+        async function capture() {
+            try {
+                const result = await invoke('capture_screen');
+                console.log('Capture:', result);
+            } catch (error) {
+                console.error('Erreur capture:', error);
+            }
+        }
+
+        async function ask() {
+            console.log('Fonction Ask...');
+            // TODO: Implémenter la fonction Ask
+        }
+
+        async function hideNuma() {
+            try {
+                // Basculer l'affichage de Numa (show/hide)
+                await invoke('toggle_numa_visibility');
+                console.log('Visibilité Numa basculée');
+            } catch (error) {
+                console.error('Erreur basculement Numa:', error);
+            }
+        }
+
+        async function closeHUD() {
+            try {
+                // Fermer le MainHUD
+                window.close();
+            } catch (error) {
+                console.error('Erreur fermeture HUD:', error);
+            }
+        }
+
+        // Rendre la fenêtre déplaçable
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        // Forcer le focus au chargement
+        window.addEventListener('load', () => {
+            invoke('focus_mainhud').catch(error => {
+                console.error('Erreur focus MainHUD:', error);
+            });
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.control-btn, .close-btn')) return;
+            
+            isDragging = true;
+            const rect = e.target.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            // Déplacer cette fenêtre et Numa ensemble
+            const newX = e.clientX - dragOffset.x;
+            const newY = e.clientY - dragOffset.y;
+            
+            // Appeler la commande Tauri pour déplacer les deux fenêtres
+            invoke('move_mainhud_with_numa', { x: newX, y: newY }).catch(error => {
+                console.error('Erreur déplacement fenêtres:', error);
+            });
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+    </script>
+</body>
+</html> 
