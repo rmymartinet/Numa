@@ -104,8 +104,9 @@ const PANEL_HEIGHT: f64 = 618.0;
 const PANEL_INITIAL_X: f64 = 200.0;
 const PANEL_INITIAL_Y: f64 = 490.0;
 
-/// Rend la fenêtre `panel` invisible/inaudible (ghost = true) ou visible (ghost = false)
-fn ghost_panel(panel: &tauri::WebviewWindow, ghost: bool) -> tauri::Result<()> {
+/// Configure la fenêtre `panel` pour qu'elle soit invisible aux captures d'écran
+/// Utilise NSWindow.sharingType = .none pour exclure du screen-capture
+fn configure_panel_stealth(panel: &tauri::WebviewWindow, stealth: bool) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     unsafe {
         use objc::{msg_send, sel, sel_impl};
@@ -113,17 +114,25 @@ fn ghost_panel(panel: &tauri::WebviewWindow, ghost: bool) -> tauri::Result<()> {
 
         let win: *mut Object = panel.ns_window()? as *mut Object;
 
-        // — transparence —
-        let alpha: f64 = if ghost { 0.0 } else { 1.0 };
-        let _: () = msg_send![win, setAlphaValue: alpha];
-
-        // — clics traversants —
-        let ignores: bool = ghost;
-        let _: () = msg_send![win, setIgnoresMouseEvents: ignores];
+        if stealth {
+            // — exclure du screen-capture —
+            // 0 = NSWindowSharingNone
+            let _: () = msg_send![win, setSharingType: 0];
+            
+            // — garder les clics actifs pour l'interaction —
+            // let _: () = msg_send![win, setIgnoresMouseEvents: true];
+        } else {
+            // — réactiver la capture —
+            // 2 = NSWindowSharingReadWrite (comportement normal)
+            let _: () = msg_send![win, setSharingType: 2];
+            
+            // — réactiver les clics explicitement —
+            let _: () = msg_send![win, setIgnoresMouseEvents: false];
+        }
     }
 
-    // Sur Windows/Linux tu peux à la place jouer sur la z-order ou le level,
-    // mais ici on cible macOS uniquement.
+    // Sur Windows/Linux il n'existe pas d'équivalent public pour masquer une fenêtre
+    // d'une capture système. On devra accepter qu'elle soit visible ou écrire du code natif.
     Ok(())
 }
 
@@ -179,8 +188,20 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
     let _hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let panel = app.get_webview_window("panel").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Panel window not found")))?;
 
-    ghost_panel(&panel, false)?; // redeviens visible / interactif
-    panel.show()?; // au-dessus du HUD
+    // 1) Rendre visible et interactif
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
+        let win = panel.ns_window()? as *mut objc::runtime::Object;
+        let _: () = msg_send![win, setAlphaValue: 1.0];
+        let _: () = msg_send![win, setIgnoresMouseEvents: false];
+    }
+    
+    // 2) Réactiver la capture d'écran
+    configure_panel_stealth(&panel, false)?;
+    
+    // 3) Afficher au-dessus du HUD
+    panel.show()?;
     
     Ok(())
 }
@@ -188,9 +209,35 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
 #[tauri::command]
 fn panel_hide(app: AppHandle) -> tauri::Result<()> {
     if let Some(panel) = app.get_webview_window("panel") {
-        ghost_panel(&panel, true)?;
+        // 1) Rendre invisible et non-interactif
+        #[cfg(target_os = "macos")]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = panel.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, setAlphaValue: 0.0];
+            let _: () = msg_send![win, setIgnoresMouseEvents: true];
+        }
+        
+        // 2) Exclure de la capture d'écran
+        configure_panel_stealth(&panel, true)?;
     }
     Ok(())
+}
+
+#[tauri::command]
+fn toggle_stealth_cmd(app: AppHandle) {
+    stealth::toggle_stealth(&app);
+}
+
+#[tauri::command]
+fn get_stealth_status(app: AppHandle) -> bool {
+    app.state::<stealth::StealthState>().is_active()
+}
+
+#[tauri::command]
+fn test_stealth_manual(app: AppHandle) {
+    println!("🧪 Test manuel du mode furtif");
+    stealth::toggle_stealth(&app);
 }
 
 
@@ -198,17 +245,26 @@ fn panel_hide(app: AppHandle) -> tauri::Result<()> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![capture_and_analyze, capture_screen, get_image_as_base64, stealth::hide_for_capture, close_all_windows, start_window_dragging, resize_window, panel_show, panel_hide])
-
+        .manage(stealth::StealthState::default())
+        .invoke_handler(tauri::generate_handler![
+            capture_and_analyze, 
+            capture_screen, 
+            get_image_as_base64, 
+            close_all_windows, 
+            start_window_dragging, 
+            resize_window, 
+            panel_show, 
+            panel_hide,
+            toggle_stealth_cmd,
+            get_stealth_status,
+            test_stealth_manual
+        ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 window.app_handle().exit(0);
             }
         })
         .setup(|app| {
-            // Démarrer le moniteur de captures d'écran
-            stealth::start_screenshot_monitor(app.handle().clone());
-            
             // Forcer le HUD au premier plan
             if let Some(hud_win) = app.get_webview_window("hud") {
                 hud_win.set_focus().ok();

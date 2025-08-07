@@ -126,6 +126,17 @@ export const APP_SHORTCUTS: KeyboardShortcut[] = [
     description: 'Changer de thème',
   },
   {
+    key: 'k',
+    ctrlKey: true,
+    metaKey: true, // Cmd+K sur Mac
+    action: () => {
+      // Toggle mode furtif
+      const event = new CustomEvent('toggle-stealth');
+      window.dispatchEvent(event);
+    },
+    description: 'Mode furtif (invisible aux captures)',
+  },
+  {
     key: 'Escape',
     action: () => {
       // Fermer la bulle flottante

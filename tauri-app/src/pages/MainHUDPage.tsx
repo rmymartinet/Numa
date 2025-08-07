@@ -151,10 +151,23 @@ const MainHUDPage: React.FC = () => {
           setShortcutStatus("Erreur lors de la capture d'écran");
         });
 
+        // Écouter les événements de mode furtif
+        const unlistenStealthActivated = await listen('stealth-activated', () => {
+          console.log('Mode furtif activé');
+          setShortcutStatus('Mode furtif activé - invisible aux captures');
+        });
+
+        const unlistenStealthDeactivated = await listen('stealth-deactivated', () => {
+          console.log('Mode furtif désactivé');
+          setShortcutStatus('Mode furtif désactivé');
+        });
+
         return () => {
           unlistenGlobalShortcut();
           unlistenSuccess();
           unlistenError();
+          unlistenStealthActivated();
+          unlistenStealthDeactivated();
         };
       } catch (error) {
         console.error('Erreur lors de la configuration des événements:', error);
@@ -192,6 +205,33 @@ const MainHUDPage: React.FC = () => {
       ctrlKey: true,
       action: toggleTheme,
       description: 'Changer de thème',
+    },
+    {
+      key: 'k',
+      ctrlKey: true,
+      metaKey: true, // Cmd+K sur Mac
+      action: async () => {
+        try {
+          await invoke('toggle_stealth_cmd');
+          console.log('Mode furtif activé/désactivé (Cmd+K)');
+        } catch (error) {
+          console.error('Erreur lors du toggle du mode furtif:', error);
+        }
+      },
+      description: 'Mode furtif (invisible aux captures)',
+    },
+    {
+      key: 's',
+      ctrlKey: true, // Test avec Ctrl+S
+      action: async () => {
+        try {
+          await invoke('toggle_stealth_cmd');
+          console.log('Mode furtif activé/désactivé (Ctrl+S)');
+        } catch (error) {
+          console.error('Erreur lors du toggle du mode furtif:', error);
+        }
+      },
+      description: 'Mode furtif test (Ctrl+S)',
     },
   ];
 
