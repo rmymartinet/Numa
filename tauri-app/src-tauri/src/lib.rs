@@ -2,8 +2,7 @@
 
 mod stealth;
 
-use tauri::{AppHandle,Manager, LogicalPosition, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use tauri::{AppHandle, Manager, LogicalPosition, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
 
 
 fn capture_screen_internal() -> Result<String, String> {
@@ -34,27 +33,15 @@ fn capture_screen_internal() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn capture_screen() -> Result<String, String> {
-    // Capturer l'écran
-    let result = capture_screen_internal();
-    result
+fn capture_screen() -> Result<String, String> {
+    capture_screen_internal()
 }
 
 #[tauri::command]
 fn capture_and_analyze() -> String {
-    println!("Raccourci clavier global activé ! Capture et analyse en cours...");
-    
-    // Capturer l'écran
     match capture_screen_internal() {
-        Ok(image_path) => {
-            println!("Capture réussie: {}", image_path);
-            // Ici on pourrait ajouter l'analyse automatique
-            format!("Capture réussie: {}", image_path)
-        }
-        Err(e) => {
-            println!("Erreur de capture: {}", e);
-            format!("Erreur de capture: {}", e)
-        }
+        Ok(image_path) => format!("Capture réussie: {}", image_path),
+        Err(e) => format!("Erreur de capture: {}", e),
     }
 }
 
@@ -109,8 +96,11 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 
 
 
-const PANEL_W: f64 = 1072.0;
-const PANEL_H: f64 = 618.0;
+// Configuration du panel
+const PANEL_WIDTH: f64 = 1072.0;
+const PANEL_HEIGHT: f64 = 618.0;
+const PANEL_INITIAL_X: f64 = 200.0;
+const PANEL_INITIAL_Y: f64 = 490.0;
 
 /// Rend la fenêtre `panel` invisible/inaudible (ghost = true) ou visible (ghost = false)
 fn ghost_panel(panel: &tauri::WebviewWindow, ghost: bool) -> tauri::Result<()> {
@@ -137,10 +127,10 @@ fn ghost_panel(panel: &tauri::WebviewWindow, ghost: bool) -> tauri::Result<()> {
 
 fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     if let Some(w) = app.get_webview_window("panel") {
-        return Ok(w);                   // déjà créé
+        return Ok(w); // déjà créé
     }
     
-    let hud = app.get_webview_window("hud").expect("HUD must exist");
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let parent_ptr = hud.ns_window()?;
     
     let panel = WebviewWindowBuilder::new(
@@ -156,8 +146,8 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     .minimizable(false)
     .closable(false)
     .skip_taskbar(true)
-    .inner_size(PANEL_W, PANEL_H)
-    .position(200.0 , 490.0)                
+    .inner_size(PANEL_WIDTH, PANEL_HEIGHT)
+    .position(PANEL_INITIAL_X, PANEL_INITIAL_Y)                
     .visible(false)
     .build()?;
     
@@ -174,28 +164,22 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         let _: () = msg_send![panel_ns, setBackgroundColor: clear];
         
         // 2) Style borderless SANS ombre
-        const BORDERLESS: u64 = 0;                     // == NSWindowStyleMaskBorderless
+        const BORDERLESS: u64 = 0; // == NSWindowStyleMaskBorderless
         let _: () = msg_send![panel_ns, setStyleMask: BORDERLESS];
-        let _: () = msg_send![panel_ns, setHasShadow: false];   // ← appeler APRÈS setStyleMask
-        
-        println!("Fenêtre panel rendue complètement transparente");
+        let _: () = msg_send![panel_ns, setHasShadow: false]; // ← appeler APRÈS setStyleMask
     }
     Ok(panel)
 }
 
 #[tauri::command]
 fn panel_show(app: AppHandle) -> tauri::Result<()> {
-    println!("panel_show appelé");
-    
-    // Créer le panel une seule fois s'il n'existe pas
     ensure_panel(&app)?;
-    let hud = app.get_webview_window("hud").unwrap();
-    let panel = app.get_webview_window("panel").unwrap();
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let panel = app.get_webview_window("panel").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Panel window not found")))?;
 
-    ghost_panel(&panel, false)?;   // redeviens visible / interactif
-    panel.show()?;                 // au-dessus du HUD
+    ghost_panel(&panel, false)?; // redeviens visible / interactif
+    panel.show()?; // au-dessus du HUD
     
-    println!("Panel affiché et attaché au HUD");
     Ok(())
 }
 
@@ -203,7 +187,6 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
 fn panel_hide(app: AppHandle) -> tauri::Result<()> {
     if let Some(panel) = app.get_webview_window("panel") {
         ghost_panel(&panel, true)?;
-        println!("Panel rendu fantôme (relation parent intacte)");
     }
     Ok(())
 }
@@ -217,30 +200,18 @@ pub fn run() {
 
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                println!("Fermeture de l'application Numa");
-                // Fermer complètement l'application
                 window.app_handle().exit(0);
             }
-            
-
         })
         .setup(|app| {
-            println!("Application Numa démarrée - Interface unifiée");
-            
             // Démarrer le moniteur de captures d'écran
             stealth::start_screenshot_monitor(app.handle().clone());
-            println!("Moniteur de captures d'écran activé");
-            
-            // La fenêtre HUD est déjà créée par la configuration Tauri
-            println!("Fenêtre HUD principale active");
             
             // Forcer le HUD au premier plan
             if let Some(hud_win) = app.get_webview_window("hud") {
                 hud_win.set_focus().ok();
-                println!("HUD mis au premier plan");
             }
             
-            println!("Setup terminé - Interface unifiée activée");
             Ok(())
         })
         .run(tauri::generate_context!())
