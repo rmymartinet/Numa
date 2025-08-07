@@ -112,6 +112,29 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 const PANEL_W: f64 = 1072.0;
 const PANEL_H: f64 = 618.0;
 
+/// Rend la fenêtre `panel` invisible/inaudible (ghost = true) ou visible (ghost = false)
+fn ghost_panel(panel: &tauri::WebviewWindow, ghost: bool) -> tauri::Result<()> {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
+        use objc::runtime::Object;
+
+        let win: *mut Object = panel.ns_window()? as *mut Object;
+
+        // — transparence —
+        let alpha: f64 = if ghost { 0.0 } else { 1.0 };
+        let _: () = msg_send![win, setAlphaValue: alpha];
+
+        // — clics traversants —
+        let ignores: bool = ghost;
+        let _: () = msg_send![win, setIgnoresMouseEvents: ignores];
+    }
+
+    // Sur Windows/Linux tu peux à la place jouer sur la z-order ou le level,
+    // mais ici on cible macOS uniquement.
+    Ok(())
+}
+
 fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     if let Some(w) = app.get_webview_window("panel") {
         return Ok(w);                   // déjà créé
@@ -166,41 +189,21 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
     
     // Créer le panel une seule fois s'il n'existe pas
     ensure_panel(&app)?;
-    let panel = app.get_webview_window("panel").unwrap();
     let hud = app.get_webview_window("hud").unwrap();
-    
-    panel.show()?;                         // remet la fenêtre à l'écran
+    let panel = app.get_webview_window("panel").unwrap();
 
-    // 🔑 Re-attacher le panel au HUD après chaque show()
-    #[cfg(target_os = "macos")]
-    unsafe {
-        use objc::{msg_send, sel, sel_impl};
-        use objc::runtime::Object;
-        let hud_ns:   *mut Object = hud.ns_window()? as *mut Object;
-        let panel_ns: *mut Object = panel.ns_window()? as *mut Object;
-        
-        // D'abord, essayer de retirer le panel s'il était déjà attaché
-        let _: () = msg_send![hud_ns, removeChildWindow:panel_ns];
-        
-        // Attendre un peu pour que la suppression soit effective
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        
-        // Puis re-attacher
-        let _: () = msg_send![hud_ns, addChildWindow:panel_ns ordered:1];
-        
-        println!("Panel re-attaché au HUD avec succès");
-    }
-
-    println!("Panel affiché et re-attaché au HUD");
+    ghost_panel(&panel, false)?;   // redeviens visible / interactif
+    panel.show()?;                 // au-dessus du HUD
     
+    println!("Panel affiché et attaché au HUD");
     Ok(())
 }
 
 #[tauri::command]
 fn panel_hide(app: AppHandle) -> tauri::Result<()> {
     if let Some(panel) = app.get_webview_window("panel") {
-        panel.hide()?;
-        println!("Panel caché");
+        ghost_panel(&panel, true)?;
+        println!("Panel rendu fantôme (relation parent intacte)");
     }
     Ok(())
 }
