@@ -26,8 +26,6 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ isVisible = false, 
 
   const performanceMetrics = metrics.filter(m => m.category === 'performance');
   const errorMetrics = metrics.filter(m => m.category === 'error');
-  const userMetricsData = metrics.filter(m => m.category === 'user');
-  const businessMetricsData = metrics.filter(m => m.category === 'business');
 
   const getLatestMetric = (name: string) => {
     const metric = metrics.find(m => m.name === name);

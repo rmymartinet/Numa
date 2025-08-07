@@ -260,10 +260,22 @@ class MetricsTracker {
         body: JSON.stringify(payload),
       });
 
+      // Vérifier les alertes avec les nouvelles métriques
+      this.checkAlerts(payload);
+
       this.metrics = []; // Clear sent metrics
     } catch (error) {
       console.error('Failed to send metrics:', error);
     }
+  }
+
+  private checkAlerts(metrics: any): void {
+    // Importer dynamiquement pour éviter les dépendances circulaires
+    import('./alerts').then(({ alertManager }) => {
+      alertManager.checkAlerts(metrics);
+    }).catch(() => {
+      // Ignorer si le module n'est pas disponible
+    });
   }
 
   // API publique

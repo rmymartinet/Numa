@@ -8,6 +8,8 @@ import { useTheme } from '../hooks/useTheme';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { useMetrics } from '../utils/metrics';
 import MetricsDashboard from '../components/MetricsDashboard';
+import { useAlerts } from '../utils/alerts';
+import AlertsPanel from '../components/AlertsPanel';
 import HUDBar from '../components/HUDBar';
 
 import './MainHUDPage.css';
@@ -32,7 +34,9 @@ const MainHUDPage: React.FC = () => {
   const logger = useLogger('MainHUDPage');
   const { toggleTheme } = useTheme();
   const { trackFeatureUsage: _trackFeatureUsage, trackConversionEvent: _trackConversionEvent } = useMetrics();
+  const { alerts } = useAlerts();
   const [showMetricsDashboard, setShowMetricsDashboard] = useState(false);
+  const [showAlertsPanel, setShowAlertsPanel] = useState(false);
 
   // Gestion des onglets
   const handleTabChange = (tab: TabType) => {
@@ -248,10 +252,30 @@ const MainHUDPage: React.FC = () => {
         📊
       </button>
 
+      {/* Bouton pour ouvrir le centre d'alertes */}
+      <button
+        onClick={() => setShowAlertsPanel(true)}
+        className={`fixed bottom-4 right-16 rounded-full p-3 shadow-lg z-40 ${
+          alerts.length > 0 
+            ? 'bg-red-500 hover:bg-red-600 text-white' 
+            : 'bg-gray-500 hover:bg-gray-600 text-white'
+        }`}
+        title={`Centre d'alertes (${alerts.length} alerte${alerts.length > 1 ? 's' : ''})`}
+        style={{ pointerEvents: 'auto' }}
+      >
+        {alerts.length > 0 ? `🚨${alerts.length}` : '🚨'}
+      </button>
+
       {/* Dashboard métriques */}
       <MetricsDashboard
         isVisible={showMetricsDashboard}
         onClose={() => setShowMetricsDashboard(false)}
+      />
+
+      {/* Centre d'alertes */}
+      <AlertsPanel
+        isVisible={showAlertsPanel}
+        onClose={() => setShowAlertsPanel(false)}
       />
     </div>
   );
