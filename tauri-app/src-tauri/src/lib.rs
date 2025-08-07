@@ -2,7 +2,9 @@
 
 mod stealth;
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle,Manager, LogicalPosition, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 
 fn capture_screen_internal() -> Result<String, String> {
     use std::fs;
@@ -106,62 +108,72 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 
 
 
-fn ensure_panel(app: &tauri::AppHandle) -> tauri::Result<()> {
-    // Si déjà créé, on sort
-    if app.get_webview_window("panel").is_some() { return Ok(()); }
 
+const PANEL_W: f64 = 1050.0;
+const PANEL_H: f64 = 600.0;
+
+
+
+fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
+    if let Some(w) = app.get_webview_window("panel") {
+        return Ok(w);                   // déjà créé
+    }
+    
     let hud = app.get_webview_window("hud").expect("HUD must exist");
-
-    println!("Création du panel enfant");
-
-    // Création du child-window avec delta constant
-    let parent_ptr = hud.ns_window()?;   // -> *mut std::ffi::c_void
+    let parent_ptr = hud.ns_window()?;
     
-    let panel = tauri::WebviewWindowBuilder::new(
-            app,
-            "panel",
-            tauri::WebviewUrl::External("http://localhost:1420/#/panel".parse().unwrap()),     // route React pour le panneau
-        )
-        .parent_raw(parent_ptr)                 // 🔑 version bas-niveau
-        .decorations(false)
-        .transparent(true)
-        .always_on_top(true)
-        .resizable(false)
-        .inner_size(1050f64, 600f64)             // largeur = HUD, hauteur panneau
-        .position(0.0, 450.0)                     // 🔑 delta constant : 0px à gauche, 100px dessous
-        .visible(false)                         // caché au lancement
-        .build()?;
-    
-    println!("Panel créé comme enfant du HUD avec delta constant");
-    Ok(())
+    let panel = WebviewWindowBuilder::new(
+        app,
+        "panel",
+        WebviewUrl::External("http://localhost:1420/#/panel".parse().unwrap()),
+    )
+    .parent_raw(parent_ptr)                 // 🔑 Child window du HUD
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .resizable(false)
+    .inner_size(PANEL_W, PANEL_H)
+    .position(0.0, 450.0)                    // 🔑 Delta constant : 0px à gauche, 64px dessous
+    .visible(false)
+    .build()?;
+    Ok(panel)
 }
 
 #[tauri::command]
-fn panel_show(app: tauri::AppHandle) -> tauri::Result<()> {
+fn panel_show(app: AppHandle) -> tauri::Result<()> {
     println!("panel_show appelé");
-    ensure_panel(&app)?;                       // la crée une fois
-    let panel = app.get_webview_window("panel").unwrap();
-    panel.show()?;
     
-    // 🔑 Solution Cluely : parent_raw + delta constant
-    // Le panel suit automatiquement le HUD grâce au parent_raw
-    println!("Panel affiché - suivi automatique garanti");
+    // Créer le panel une seule fois s'il n'existe pas
+    ensure_panel(&app)?;
+    let panel = app.get_webview_window("panel").unwrap();
+    let hud = app.get_webview_window("hud").unwrap();
+    
+    panel.show()?;                         // remet la fenêtre à l'écran
+
+    // 🔑 Re-attacher le panel au HUD après chaque show()
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
+        use objc::runtime::Object;
+        let hud_ns:   *mut Object = hud.ns_window()? as *mut Object;
+        let panel_ns: *mut Object = panel.ns_window()? as *mut Object;
+        // NSWindowAbove == 1
+        let _: () = msg_send![hud_ns, addChildWindow:panel_ns ordered:1];
+    }
+
+    println!("Panel affiché et re-attaché au HUD");
     
     Ok(())
 }
 
 #[tauri::command]
-fn panel_hide(app: tauri::AppHandle) -> tauri::Result<()> {
-    println!("panel_hide appelé");
+fn panel_hide(app: AppHandle) -> tauri::Result<()> {
     if let Some(panel) = app.get_webview_window("panel") {
         panel.hide()?;
-        println!("Panel caché avec succès");
+        println!("Panel caché");
     }
     Ok(())
 }
-
-
-
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
