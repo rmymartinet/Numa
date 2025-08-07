@@ -30,34 +30,22 @@ pub fn toggle_stealth(app: &AppHandle) {
         move || unsafe {
             println!("🕵️ Toggle stealth: active = {}", active);
             
-            if let Some(hud) = app.get_webview_window("hud") {
-                if let Ok(win) = hud.ns_window() {
-                    println!("✅ HUD window found, applying stealth...");
-                    if active {
-                        hide_ns_window(win as _);
+            // Appliquer à toutes les fenêtres existantes
+            for label in ["hud", "panel"] {
+                if let Some(window) = app.get_webview_window(label) {
+                    if let Ok(win) = window.ns_window() {
+                        println!("✅ {} window found, applying stealth...", label);
+                        if active {
+                            hide_ns_window(win as _);
+                        } else {
+                            show_ns_window(win as _);
+                        }
                     } else {
-                        show_ns_window(win as _);
+                        println!("❌ {} ns_window() failed", label);
                     }
                 } else {
-                    println!("❌ HUD ns_window() failed");
+                    println!("❌ {} window not found", label);
                 }
-            } else {
-                println!("❌ HUD window not found");
-            }
-            
-            if let Some(panel) = app.get_webview_window("panel") {
-                if let Ok(win) = panel.ns_window() {
-                    println!("✅ Panel window found, applying stealth...");
-                    if active {
-                        hide_ns_window(win as _);
-                    } else {
-                        show_ns_window(win as _);
-                    }
-                } else {
-                    println!("❌ Panel ns_window() failed");
-                }
-            } else {
-                println!("❌ Panel window not found");
             }
         }
     });
@@ -118,3 +106,37 @@ pub unsafe fn make_windows_click_through(app: &AppHandle, click_through: bool) {
 
 #[cfg(not(target_os = "macos"))]
 pub unsafe fn make_windows_click_through(_: &AppHandle, _: bool) {}
+
+// Fonction pour forcer l'activation du mode furtif
+pub fn force_stealth_on(app: &AppHandle) {
+    let state = app.state::<StealthState>().clone();
+    {
+        let mut guard = state.0.lock().unwrap();
+        *guard = true;
+    }
+    
+    // Appliquer le mode furtif à toutes les fenêtres existantes
+    app.run_on_main_thread({
+        let app = app.clone();
+        move || unsafe {
+            println!("🕵️ Force stealth mode ON");
+            
+            // Appliquer à toutes les fenêtres existantes
+            for label in ["hud", "panel"] {
+                if let Some(window) = app.get_webview_window(label) {
+                    if let Ok(win) = window.ns_window() {
+                        println!("✅ {} window found, applying stealth...", label);
+                        hide_ns_window(win as _);
+                    } else {
+                        println!("❌ {} ns_window() failed", label);
+                    }
+                } else {
+                    println!("❌ {} window not found", label);
+                }
+            }
+        }
+    });
+    
+    // Émettre l'événement pour informer le frontend
+    let _ = app.emit("stealth-activated", ());
+}

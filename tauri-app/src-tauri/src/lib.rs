@@ -104,6 +104,12 @@ const PANEL_HEIGHT: f64 = 618.0;
 const PANEL_INITIAL_X: f64 = 200.0;
 const PANEL_INITIAL_Y: f64 = 490.0;
 
+// Fonction d'aide pour appliquer l'état furtif actuel
+fn apply_current_stealth(app: &AppHandle, win: &tauri::WebviewWindow) -> tauri::Result<()> {
+    let stealth = app.state::<stealth::StealthState>().is_active();
+    configure_panel_stealth(win, stealth)
+}
+
 /// Configure la fenêtre `panel` pour qu'elle soit invisible aux captures d'écran
 /// Utilise NSWindow.sharingType = .none pour exclure du screen-capture
 fn configure_panel_stealth(panel: &tauri::WebviewWindow, stealth: bool) -> tauri::Result<()> {
@@ -178,6 +184,12 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         const BORDERLESS: u64 = 0; // == NSWindowStyleMaskBorderless
         let _: () = msg_send![panel_ns, setStyleMask: BORDERLESS];
         let _: () = msg_send![panel_ns, setHasShadow: false]; // ← appeler APRÈS setStyleMask
+        
+        // 3) Appliquer le mode furtif si il est actif
+        if app.state::<stealth::StealthState>().is_active() {
+            println!("🔒 Applying stealth to newly created panel");
+            let _: () = msg_send![panel_ns, setSharingType: 0u64];
+        }
     }
     Ok(panel)
 }
@@ -197,8 +209,8 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
         let _: () = msg_send![win, setIgnoresMouseEvents: false];
     }
     
-    // 2) Réactiver la capture d'écran
-    configure_panel_stealth(&panel, false)?;
+    // 2) Appliquer l'état furtif actuel (0 si furtif, 2 sinon)
+    apply_current_stealth(&app, &panel)?;
     
     // 3) Afficher au-dessus du HUD
     panel.show()?;
@@ -218,8 +230,8 @@ fn panel_hide(app: AppHandle) -> tauri::Result<()> {
             let _: () = msg_send![win, setIgnoresMouseEvents: true];
         }
         
-        // 2) Exclure de la capture d'écran
-        configure_panel_stealth(&panel, true)?;
+        // 2) Appliquer l'état furtif actuel (reste 0 si furtif)
+        apply_current_stealth(&app, &panel)?;
     }
     Ok(())
 }
@@ -269,6 +281,14 @@ pub fn run() {
             if let Some(hud_win) = app.get_webview_window("hud") {
                 hud_win.set_focus().ok();
             }
+            
+            // Activer le mode furtif automatiquement au démarrage
+            // On attend un peu que les fenêtres soient complètement initialisées
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+                stealth::force_stealth_on(&app_handle);
+            });
             
             Ok(())
         })
