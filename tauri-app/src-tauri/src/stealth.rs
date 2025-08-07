@@ -1,7 +1,7 @@
 use tauri::Manager;
 use std::time::Duration;
 
-pub fn start_screenshot_monitor(app: tauri::AppHandle) {
+pub fn start_screenshot_monitor(_app: tauri::AppHandle) {
     println!("Moniteur de captures d'écran démarré (version simplifiée)");
     
     // Pour l'instant, on utilise une version simplifiée

@@ -5,25 +5,26 @@
   "identifier": "com.martinet.veil",
                 "build": {
                 "beforeDevCommand": "",
-                "devUrl": "http://localhost:1420",
+                "devUrl": "http://localhost:1420/hud",
                 "beforeBuildCommand": "npm run build",
                 "frontendDist": "../dist"
               },
     "app": {
                     "windows": [
                   {
-                    "title": "Numa - Capture d'écran intelligente",
-                    "label": "Numa",
-                    "width": 1200,
+                    "title": "Numa - AI Assistant",
+                    "label": "hud",
+                    "width": 1100,
                     "height": 800,
-                    "resizable": false,
-                    "decorations": true,
+                    "resizable": true,
+                    "decorations": false,
                     "minimizable": true,
-                    "transparent": false,
-                    "alwaysOnTop": false,
+                    "transparent": true,
+                    "alwaysOnTop": true,
                     "skipTaskbar": false,
                     "visible": true,
-                    "center": true
+                    "center": true,
+                    "closable": true
                   }
                 ],
     "security": {
