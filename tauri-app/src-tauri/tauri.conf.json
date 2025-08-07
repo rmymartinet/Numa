@@ -14,8 +14,9 @@
                   {
                     "title": "Numa - AI Assistant",
                     "label": "hud",
-                    "width": 700,
-                    "height": 120,
+                    "url": "http://localhost:1420/#/hud",
+                    "width": 600,
+                    "height": 64,
                     "resizable": false,
                     "decorations": false,
                     "minimizable": false,
@@ -25,6 +26,21 @@
                     "visible": true,
                     "center": true,
                     "closable": true
+                  },
+                  {
+                    "title": "Numa Panel",
+                    "label": "panel",
+                    "url": "http://localhost:1420/#/blank",
+                    "width": 1200,
+                    "height": 800,
+                    "resizable": false,
+                    "decorations": false,
+                    "minimizable": false,
+                    "transparent": true,
+                    "alwaysOnTop": true,
+                    "skipTaskbar": true,
+                    "visible": false,
+                    "closable": false
                   }
                 ],
     "security": {

@@ -52,7 +52,7 @@ const HUDBar: React.FC<HUDBarProps> = ({
         alignItems: 'center',
         gap: '12px',
         padding: '12px 20px',
-        backgroundColor: 'rgba(0, 0, 0, 0.9)', // Plus opaque pour debug
+        backgroundColor: 'rgba(0, 0, 0, 0.9)', // Couleur normale
         backdropFilter: 'blur(20px)',
         borderRadius: '50px',
         border: '1px solid rgba(255, 255, 255, 0.1)',

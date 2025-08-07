@@ -81,10 +81,20 @@ const MainHUDPage: React.FC = () => {
   }
 
   // Gestion de l'ouverture/fermeture du panneau
-  const handleTogglePanel = () => {
+  const handleTogglePanel = async () => {
     console.log('Toggle panel clicked, current state:', isPanelExpanded);
-    setIsPanelExpanded(!isPanelExpanded);
-    console.log('New state will be:', !isPanelExpanded);
+    const newState = !isPanelExpanded;
+    setIsPanelExpanded(newState);
+    
+    try {
+      if (newState) {
+        await invoke('panel_show', { passthrough: false });
+      } else {
+        await invoke('panel_hide');
+      }
+    } catch (error) {
+      console.error('Erreur toggle panel:', error);
+    }
   };
 
   // Gestion de la fermeture de l'app
@@ -175,28 +185,7 @@ const MainHUDPage: React.FC = () => {
   
   useKeyboardNavigation(shortcuts);
 
-  // Fonction pour redimensionner la fenêtre selon l'approche Cluely
-  const resizeWindowToContent = async () => {
-    try {
-      if (isPanelExpanded) {
-        // Panel ouvert : fenêtre complète comme Cluely
-        console.log('Panel ouvert - Fenêtre complète');
-        await invoke('resize_window', { 
-          width: 1200, // Largeur complète
-          height: 800  // Hauteur complète
-        });
-      } else {
-        // Panel fermé : juste la taille du HUD
-        console.log('Panel fermé - Taille HUD');
-        await invoke('resize_window', { 
-          width: 600, 
-          height: 64 
-        });
-      }
-    } catch (error) {
-      console.error('Erreur redimensionnement:', error);
-    }
-  };
+
 
   // Debug: Surveiller les changements d'état du panel
   useEffect(() => {
@@ -207,18 +196,7 @@ const MainHUDPage: React.FC = () => {
     } else {
       document.title = 'NUMA - Panel CLOSED';
     }
-    
-    // Redimensionner la fenêtre après un délai pour laisser le DOM se mettre à jour
-    setTimeout(resizeWindowToContent, 300);
   }, [isPanelExpanded]);
-
-  // Redimensionnement initial au démarrage
-  useEffect(() => {
-    const initialResize = () => {
-      setTimeout(resizeWindowToContent, 500);
-    };
-    initialResize();
-  }, []);
 
   return (
     <div 
@@ -227,7 +205,7 @@ const MainHUDPage: React.FC = () => {
       style={{
         width: '100vw',
         height: '100vh',
-        backgroundColor: 'red',
+        backgroundColor: 'transparent',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -254,35 +232,7 @@ const MainHUDPage: React.FC = () => {
         />
       </div>
       
-      {/* DropdownPanel en pleine taille */}
-      {isPanelExpanded && (
-        <div 
-          style={{ 
-            pointerEvents: 'auto',
-            position: 'absolute',
-            top: '80px', // En dessous du HUD
-            left: '0',
-            right: '0',
-            bottom: '0',
-            display: 'flex',
-            justifyContent: 'center',
-            overflow: 'hidden'
-          }} 
-          data-dropdown-panel
-        >
-          <DropdownPanel 
-            isExpanded={isPanelExpanded}
-            activeTab={activeTab}
-            isDark={isDark}
-            isProcessing={isProcessing}
-            extractedText={extractedText}
-            shortcutStatus={shortcutStatus}
-            onTabChange={handleTabChange}
-            onToggleTheme={toggleTheme}
-            onCapture={handleCapture}
-          />
-        </div>
-      )}
+
     </div>
   );
 };

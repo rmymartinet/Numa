@@ -3,7 +3,7 @@ import DropdownPanel from '../components/DropdownPanel';
 
 type TabType = 'activity' | 'prompts' | 'settings';
 
-const BlankPage: React.FC = () => {
+const PanelPage: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<TabType>('activity');
   const [isDark, setIsDark] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -145,4 +145,4 @@ const BlankPage: React.FC = () => {
   );
 };
 
-export default BlankPage;
+export default PanelPage;

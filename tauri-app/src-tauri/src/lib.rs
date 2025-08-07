@@ -104,6 +104,34 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
     Ok(())
 }
 
+#[tauri::command]
+fn panel_show(app: AppHandle, passthrough: bool) -> tauri::Result<()> {
+    let Some(hud) = app.get_webview_window("hud") else { return Ok(()); };
+    let Some(panel) = app.get_webview_window("panel") else { return Ok(()); };
+
+    // place le panel centré par rapport au HUD
+    if let Ok(pos) = hud.outer_position() {
+        // HUD: ~500px (réel), Panel: 1200x800
+        // Centrer horizontalement: pos.x + (500-1200)/2 = pos.x - 350
+        // Positionner verticalement: pos.y + 64 (juste en dessous du HUD)
+        let panel_x = pos.x - 350; // Centré horizontalement
+        let panel_y = pos.y + 64;  // Juste en dessous du HUD
+        
+        panel.set_position(tauri::LogicalPosition::new(panel_x, panel_y))?;
+    }
+    panel.set_ignore_cursor_events(passthrough)?;
+    panel.show()?;
+    Ok(())
+}
+
+#[tauri::command]
+fn panel_hide(app: AppHandle) -> tauri::Result<()> {
+    if let Some(panel) = app.get_webview_window("panel") {
+        panel.hide()?;
+    }
+    Ok(())
+}
+
 
 
 
@@ -112,7 +140,8 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![capture_and_analyze, capture_screen, get_image_as_base64, stealth::hide_for_capture, close_all_windows, start_window_dragging, resize_window])
+        .invoke_handler(tauri::generate_handler![capture_and_analyze, capture_screen, get_image_as_base64, stealth::hide_for_capture, close_all_windows, start_window_dragging, resize_window, panel_show, panel_hide])
+
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 println!("Fermeture de l'application Numa");

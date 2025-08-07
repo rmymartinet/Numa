@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainHUDPage from './pages/MainHUDPage';
+import BlankPage from './pages/BlankPage';
 
 const AppWithRouter: React.FC = () => {
   return (
@@ -8,6 +9,7 @@ const AppWithRouter: React.FC = () => {
       <Routes>
         <Route path="/" element={<MainHUDPage />} />
         <Route path="/hud" element={<MainHUDPage />} />
+        <Route path="/blank" element={<BlankPage />} />
       </Routes>
     </Router>
   );
