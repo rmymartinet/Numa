@@ -104,25 +104,18 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
     Ok(())
 }
 
+
+
 fn ensure_panel(app: &tauri::AppHandle) -> tauri::Result<()> {
     // Si déjà créé, on sort
     if app.get_webview_window("panel").is_some() { return Ok(()); }
 
     let hud = app.get_webview_window("hud").expect("HUD must exist");
 
-    // Position logique du HUD
-    let pos  = hud.outer_position()?;
-    let size = hud.outer_size()?; // logique : 600×64
+    println!("Création du panel enfant");
 
-    println!("Création du panel enfant à la position: ({}, {})", pos.x, pos.y + size.height as i32);
-    println!("HUD position: ({}, {}), taille: {}x{}", pos.x, pos.y, size.width, size.height);
-
-    // Création du child-window
-    println!("Création de la fenêtre panel avec l'URL: http://localhost:1420/#/panel");
-    
-    // Poignée native Cocoa (void*) — only with macos-private-api
+    // Création du child-window avec delta constant
     let parent_ptr = hud.ns_window()?;   // -> *mut std::ffi::c_void
-    println!("Handle natif du HUD récupéré");
     
     let panel = tauri::WebviewWindowBuilder::new(
             app,
@@ -134,18 +127,12 @@ fn ensure_panel(app: &tauri::AppHandle) -> tauri::Result<()> {
         .transparent(true)
         .always_on_top(true)
         .resizable(false)
-        .inner_size(600f64, 600f64)             // largeur = HUD, hauteur panneau
-        .position(
-            pos.x as f64,
-            (pos.y + size.height as i32) as f64      // juste sous la barre
-        )
+        .inner_size(1050f64, 600f64)             // largeur = HUD, hauteur panneau
+        .position(0.0, 450.0)                     // 🔑 delta constant : 0px à gauche, 100px dessous
         .visible(false)                         // caché au lancement
         .build()?;
     
-    println!("Panel créé comme enfant du HUD");
-
-    // Option : propager le click-through au besoin
-    panel.set_ignore_cursor_events(false)?;
+    println!("Panel créé comme enfant du HUD avec delta constant");
     Ok(())
 }
 
@@ -155,8 +142,11 @@ fn panel_show(app: tauri::AppHandle) -> tauri::Result<()> {
     ensure_panel(&app)?;                       // la crée une fois
     let panel = app.get_webview_window("panel").unwrap();
     panel.show()?;
-    panel.set_focus()?;
-    println!("Panel affiché avec succès");
+    
+    // 🔑 Solution Cluely : parent_raw + delta constant
+    // Le panel suit automatiquement le HUD grâce au parent_raw
+    println!("Panel affiché - suivi automatique garanti");
+    
     Ok(())
 }
 
