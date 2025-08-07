@@ -6,6 +6,8 @@ import { usePreferences } from '../utils/storage';
 import { useLogger, logError, logPerformance } from '../utils/logger';
 import { useTheme } from '../hooks/useTheme';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { useMetrics } from '../utils/metrics';
+import MetricsDashboard from '../components/MetricsDashboard';
 import HUDBar from '../components/HUDBar';
 
 import './MainHUDPage.css';
@@ -29,6 +31,8 @@ const MainHUDPage: React.FC = () => {
   const [_activeTab, setActiveTab] = useState<TabType>(preferences.activeTab); // Utilisé dans handleTabChange
   const logger = useLogger('MainHUDPage');
   const { toggleTheme } = useTheme();
+  const { trackFeatureUsage: _trackFeatureUsage, trackConversionEvent: _trackConversionEvent } = useMetrics();
+  const [showMetricsDashboard, setShowMetricsDashboard] = useState(false);
 
   // Gestion des onglets
   const handleTabChange = (tab: TabType) => {
@@ -233,6 +237,22 @@ const MainHUDPage: React.FC = () => {
           onClose={handleClose}
         />
       </div>
+
+      {/* Bouton pour ouvrir le dashboard métriques */}
+      <button
+        onClick={() => setShowMetricsDashboard(true)}
+        className="fixed bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg z-40"
+        title="Ouvrir le dashboard métriques"
+        style={{ pointerEvents: 'auto' }}
+      >
+        📊
+      </button>
+
+      {/* Dashboard métriques */}
+      <MetricsDashboard
+        isVisible={showMetricsDashboard}
+        onClose={() => setShowMetricsDashboard(false)}
+      />
     </div>
   );
 };
