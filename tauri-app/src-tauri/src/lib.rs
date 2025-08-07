@@ -109,10 +109,8 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 
 
 
-const PANEL_W: f64 = 1150.0;
-const PANEL_H: f64 = 600.0;
-
-
+const PANEL_W: f64 = 1072.0;
+const PANEL_H: f64 = 618.0;
 
 fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     if let Some(w) = app.get_webview_window("panel") {
@@ -132,10 +130,33 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     .transparent(true)
     .always_on_top(true)
     .resizable(false)
+    .minimizable(false)
+    .closable(false)
+    .skip_taskbar(true)
     .inner_size(PANEL_W, PANEL_H)
     .position(200.0 , 490.0)                
     .visible(false)
     .build()?;
+    
+    // 🔑 Supprimer complètement les contours de la fenêtre sur macOS
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use objc::{class, msg_send, sel, sel_impl};
+        use objc::runtime::Object;
+        let panel_ns: *mut Object = panel.ns_window()? as *mut Object;
+        
+        // 1) Fenêtre réellement transparente
+        let clear: *mut Object = msg_send![class!(NSColor), clearColor];
+        let _: () = msg_send![panel_ns, setOpaque: false];
+        let _: () = msg_send![panel_ns, setBackgroundColor: clear];
+        
+        // 2) Style borderless SANS ombre
+        const BORDERLESS: u64 = 0;                     // == NSWindowStyleMaskBorderless
+        let _: () = msg_send![panel_ns, setStyleMask: BORDERLESS];
+        let _: () = msg_send![panel_ns, setHasShadow: false];   // ← appeler APRÈS setStyleMask
+        
+        println!("Fenêtre panel rendue complètement transparente");
+    }
     Ok(panel)
 }
 

@@ -34,14 +34,12 @@ const DropdownPanel: React.FC<DropdownPanelProps> = ({
   return (
     <div style={{
       width: '100%',
-      maxWidth: '1050px',
       height: isExpanded ? '600px' : '20px',
       backgroundColor: 'rgba(0, 0, 0, 0.9)',
       backdropFilter: 'blur(20px)',
       borderRadius: '20px',
       border: '1px solid rgba(255, 255, 255, 0.1)',
       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-      marginTop: '20px',
       overflow: 'hidden',
       transition: 'all 0.3s ease',
       pointerEvents: isExpanded ? 'auto' : 'none',

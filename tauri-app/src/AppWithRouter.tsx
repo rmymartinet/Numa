@@ -8,9 +8,9 @@ const AppWithRouter: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<MainHUDPage />} />
+        {/* <Route path="/" element={<MainHUDPage />} /> */}
         <Route path="/hud" element={<MainHUDPage />} />
-        <Route path="/blank" element={<BlankPage />} />
+        {/* <Route path="/blank" element={<BlankPage />} /> */}
         <Route path="/panel" element={<PanelPage />} />
       </Routes>
     </Router>

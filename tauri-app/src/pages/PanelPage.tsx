@@ -23,15 +23,7 @@ const PanelPage: React.FC = () => {
   };
 
   return (
-    <div style={{
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: 'transparent',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'flex-start',
-      paddingTop: '20px'
-    }}>
+     
       <DropdownPanel
         isExpanded={true}
         activeTab={activeTab}
@@ -43,7 +35,6 @@ const PanelPage: React.FC = () => {
         onToggleTheme={toggleTheme}
         onCapture={handleCapture}
       />
-    </div>
   );
 };
 
