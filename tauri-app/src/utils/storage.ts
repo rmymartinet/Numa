@@ -14,6 +14,11 @@ export interface UserPreferences {
   theme: 'light' | 'dark' | 'auto';
   autoSave: boolean;
   notifications: boolean;
+  stealthMode: {
+    enabled: boolean;
+    autoActivate: boolean;
+    showIndicator: boolean;
+  };
 }
 
 // Valeurs par défaut
@@ -25,6 +30,11 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'light',
   autoSave: true,
   notifications: true,
+  stealthMode: {
+    enabled: true,
+    autoActivate: true,
+    showIndicator: true,
+  },
 };
 
 // Classe pour gérer le stockage avec localStorage

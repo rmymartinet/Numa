@@ -35,6 +35,18 @@ const SettingsContent: React.FC = () => {
                 </span>
                 <input type='checkbox' className='rounded' defaultChecked />
               </div>
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  Mode furtif automatique
+                </span>
+                <input type='checkbox' className='rounded' defaultChecked />
+              </div>
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  Indicateur mode furtif
+                </span>
+                <input type='checkbox' className='rounded' defaultChecked />
+              </div>
             </div>
           </div>
         );
