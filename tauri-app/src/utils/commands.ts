@@ -4,138 +4,114 @@
 import { z } from 'zod';
 
 // ============================================================================
-// SCHEMAS DE VALIDATION
+// CONTRAT CENTRALISÉ DES COMMANDES TAURI
 // ============================================================================
 
-// Arguments pour les commandes
-export const ImagePathSchema = z.object({
-  imagePath: z.string().min(1, "Le chemin de l'image ne peut pas être vide"),
-});
-
-export const WindowSizeSchema = z.object({
-  width: z.number().positive("La largeur doit être positive"),
-  height: z.number().positive("La hauteur doit être positive"),
-});
-
-export const ResizeWindowArgsSchema = z.object({
-  width: z.number().positive("La largeur doit être positive"),
-  height: z.number().positive("La hauteur doit être positive"),
-});
-
-// Types de retour
-export const DataUrlSchema = z.string().startsWith("data:", "Doit être une URL data valide");
-export const FilePathSchema = z.string().min(1, "Le chemin de fichier ne peut pas être vide");
-export const StealthStatusSchema = z.boolean();
-export const VoidSchema = z.void();
-
-// ============================================================================
-// DÉFINITION DES COMMANDES
-// ============================================================================
-
-export interface TauriCommands {
-  // Capture d'écran
-  capture_screen: {
-    args: z.ZodVoid;
-    return: FilePathSchema;
-  };
-  
-  capture_and_analyze: {
-    args: z.ZodVoid;
-    return: z.string();
-  };
-  
-  get_image_as_base64: {
-    args: ImagePathSchema;
-    return: DataUrlSchema;
-  };
-  
-  // Fenêtres
-  panel_show: {
-    args: z.ZodVoid;
-    return: VoidSchema;
-  };
-  
-  panel_hide: {
-    args: z.ZodVoid;
-    return: VoidSchema;
-  };
-  
-  start_window_dragging: {
-    args: z.ZodVoid;
-    return: VoidSchema;
-  };
-  
-  resize_window: {
-    args: ResizeWindowArgsSchema;
-    return: VoidSchema;
-  };
-  
-  close_all_windows: {
-    args: z.ZodVoid;
-    return: VoidSchema;
-  };
-  
-  // Mode furtif
-  toggle_stealth_cmd: {
-    args: z.ZodVoid;
-    return: VoidSchema;
-  };
-  
-  get_stealth_status: {
-    args: z.ZodVoid;
-    return: StealthStatusSchema;
-  };
-  
-  test_stealth_manual: {
-    args: z.ZodVoid;
-    return: VoidSchema;
-  };
-}
-
-// ============================================================================
-// TYPES TYPESCRIPT
-// ============================================================================
-
-export type CommandName = keyof TauriCommands;
-export type CommandArgs<T extends CommandName> = z.infer<TauriCommands[T]['args']>;
-export type CommandReturn<T extends CommandName> = z.infer<TauriCommands[T]['return']>;
-
-// ============================================================================
-// FONCTIONS DE VALIDATION
-// ============================================================================
-
-export function validateArgs<T extends CommandName>(
-  command: T,
-  args: unknown
-): CommandArgs<T> {
-  const schema = TauriCommands[command].args;
-  return schema.parse(args);
-}
-
-export function validateReturn<T extends CommandName>(
-  command: T,
-  result: unknown
-): CommandReturn<T> {
-  const schema = TauriCommands[command].return;
-  return schema.parse(result);
-}
-
-// ============================================================================
-// CONSTANTES DES NOMS DE COMMANDES
-// ============================================================================
-
+// Noms des commandes (évite les string literals)
 export const COMMAND_NAMES = {
+  // Capture d'écran
   CAPTURE_SCREEN: 'capture_screen',
   CAPTURE_AND_ANALYZE: 'capture_and_analyze',
   GET_IMAGE_AS_BASE64: 'get_image_as_base64',
-  PANEL_SHOW: 'panel_show',
-  PANEL_HIDE: 'panel_hide',
+  
+  // Fenêtres
+  CLOSE_ALL_WINDOWS: 'close_all_windows',
   START_WINDOW_DRAGGING: 'start_window_dragging',
   RESIZE_WINDOW: 'resize_window',
-  CLOSE_ALL_WINDOWS: 'close_all_windows',
-  TOGGLE_STEALTH_CMD: 'toggle_stealth_cmd',
+  PANEL_SHOW: 'panel_show',
+  PANEL_HIDE: 'panel_hide',
+  
+  // Mode furtif
+  TOGGLE_STEALTH: 'toggle_stealth_cmd',
   GET_STEALTH_STATUS: 'get_stealth_status',
   TEST_STEALTH_MANUAL: 'test_stealth_manual',
 } as const;
 
 export type CommandNameLiteral = typeof COMMAND_NAMES[keyof typeof COMMAND_NAMES];
+
+// ============================================================================
+// SCHÉMAS DE VALIDATION ZOD
+// ============================================================================
+
+// Arguments des commandes
+export const CommandArgs = {
+  [COMMAND_NAMES.GET_IMAGE_AS_BASE64]: z.object({
+    imagePath: z.string().min(1, "Le chemin de l'image est requis"),
+  }),
+  
+  [COMMAND_NAMES.RESIZE_WINDOW]: z.object({
+    width: z.number().positive("La largeur doit être positive"),
+    height: z.number().positive("La hauteur doit être positive"),
+  }),
+  
+  [COMMAND_NAMES.TOGGLE_STEALTH]: z.object({}),
+  [COMMAND_NAMES.GET_STEALTH_STATUS]: z.object({}),
+  [COMMAND_NAMES.TEST_STEALTH_MANUAL]: z.object({}),
+  [COMMAND_NAMES.CAPTURE_SCREEN]: z.object({}),
+  [COMMAND_NAMES.CAPTURE_AND_ANALYZE]: z.object({}),
+  [COMMAND_NAMES.CLOSE_ALL_WINDOWS]: z.object({}),
+  [COMMAND_NAMES.START_WINDOW_DRAGGING]: z.object({}),
+  [COMMAND_NAMES.PANEL_SHOW]: z.object({}),
+  [COMMAND_NAMES.PANEL_HIDE]: z.object({}),
+};
+
+// Résultats des commandes
+export const CommandResults = {
+  [COMMAND_NAMES.GET_IMAGE_AS_BASE64]: z.string().startsWith("data:", "Doit être une URL data"),
+  [COMMAND_NAMES.GET_STEALTH_STATUS]: z.boolean(),
+  [COMMAND_NAMES.CAPTURE_SCREEN]: z.string().min(1, "Le chemin de capture est requis"),
+  [COMMAND_NAMES.CAPTURE_AND_ANALYZE]: z.string(),
+  [COMMAND_NAMES.TOGGLE_STEALTH]: z.void(),
+  [COMMAND_NAMES.TEST_STEALTH_MANUAL]: z.void(),
+  [COMMAND_NAMES.CLOSE_ALL_WINDOWS]: z.void(),
+  [COMMAND_NAMES.START_WINDOW_DRAGGING]: z.void(),
+  [COMMAND_NAMES.RESIZE_WINDOW]: z.void(),
+  [COMMAND_NAMES.PANEL_SHOW]: z.void(),
+  [COMMAND_NAMES.PANEL_HIDE]: z.void(),
+};
+
+// ============================================================================
+// TYPES TYPESCRIPT
+// ============================================================================
+
+export type CommandArgsType<T extends CommandNameLiteral> = z.infer<typeof CommandArgs[T]>;
+export type CommandResultType<T extends CommandNameLiteral> = z.infer<typeof CommandResults[T]>;
+
+// Type pour toutes les commandes
+export type Commands = {
+  [K in CommandNameLiteral]: {
+    args: CommandArgsType<K>;
+    result: CommandResultType<K>;
+  };
+};
+
+// ============================================================================
+// FONCTIONS UTILITAIRES
+// ============================================================================
+
+/**
+ * Valide les arguments d'une commande
+ */
+export function validateCommandArgs<T extends CommandNameLiteral>(
+  command: T,
+  args: unknown
+): unknown {
+  return CommandArgs[command].parse(args);
+}
+
+/**
+ * Valide le résultat d'une commande
+ */
+export function validateCommandResult<T extends CommandNameLiteral>(
+  command: T,
+  result: unknown
+): unknown {
+  return CommandResults[command].parse(result);
+}
+
+/**
+ * Type guard pour vérifier si une commande existe
+ */
+export function isValidCommand(command: string): command is CommandNameLiteral {
+  return Object.values(COMMAND_NAMES).includes(command as CommandNameLiteral);
+}

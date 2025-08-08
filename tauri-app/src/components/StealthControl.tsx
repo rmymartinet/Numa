@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
+import { getStealthStatus, toggleStealth } from '../utils/tauriClient';
 
 interface StealthControlProps {
   isVisible?: boolean;
@@ -36,8 +36,8 @@ const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onCl
 
   const loadStealthStatus = async () => {
     try {
-      const status = await invoke('get_stealth_status');
-      setIsStealthMode(status as boolean);
+      const status = await getStealthStatus();
+      setIsStealthMode(status);
     } catch (error) {
       console.error('Erreur lors du chargement du statut furtif:', error);
     }
@@ -45,8 +45,8 @@ const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onCl
 
   const loadDetectedApps = async () => {
     try {
-      const apps = await invoke('get_detected_meeting_apps');
-      setDetectedApps(apps as string[]);
+      // TODO: Implémenter get_detected_meeting_apps
+      setDetectedApps([]);
     } catch (error) {
       console.error('Erreur lors du chargement des apps détectées:', error);
     }
@@ -54,7 +54,7 @@ const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onCl
 
   const toggleStealthMode = async () => {
     try {
-      await invoke('toggle_stealth_mode');
+      await toggleStealth();
       // L'état sera mis à jour via les événements
     } catch (error) {
       console.error('Erreur lors du toggle du mode furtif:', error);
