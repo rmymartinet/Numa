@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '../utils/logger';
+import { errorReporter } from '../utils/errorReporting';
 
 interface Props {
   children: ReactNode;
@@ -29,6 +30,12 @@ class ErrorBoundary extends Component<Props, State> {
         error: error.message,
         stack: error.stack,
         componentStack: errorInfo.componentStack,
+      });
+
+      // Envoyer à Sentry si activé
+      errorReporter.captureError(error, {
+        componentStack: errorInfo.componentStack,
+        component: 'ErrorBoundary',
       });
     } catch (e) {
       console.error("Impossible de logger l'erreur:", e);

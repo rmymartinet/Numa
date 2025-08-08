@@ -32,6 +32,8 @@ class MetricsTracker {
   private businessMetrics: BusinessMetric;
   private sessionId: string;
   private isEnabled: boolean;
+  private samplingRate: number = 1.0; // 100% par défaut
+  private userConsent: boolean = false;
 
   constructor() {
     this.sessionId = this.generateSessionId();
@@ -53,6 +55,7 @@ class MetricsTracker {
       retentionRate: 0,
     };
 
+    this.loadUserConsent();
     this.initializeTracking();
   }
 
@@ -73,7 +76,7 @@ class MetricsTracker {
 
   // Métriques de performance
   trackPageLoad(): void {
-    if (!this.isEnabled) return;
+    if (!this.shouldTrack()) return;
 
     window.addEventListener('load', () => {
       const navigation = performance.getEntriesByType(
@@ -110,7 +113,7 @@ class MetricsTracker {
   }
 
   trackUserInteractions(): void {
-    if (!this.isEnabled) return;
+    if (!this.shouldTrack()) return;
 
     let interactionCount = 0;
     const trackInteraction = () => {
@@ -126,7 +129,7 @@ class MetricsTracker {
   }
 
   trackErrors(): void {
-    if (!this.isEnabled) return;
+    if (!this.shouldTrack()) return;
 
     window.addEventListener('error', event => {
       this.userMetrics.errors++;
@@ -147,7 +150,7 @@ class MetricsTracker {
   }
 
   trackMemoryUsage(): void {
-    if (!this.isEnabled || !('memory' in performance)) return;
+    if (!this.shouldTrack() || !('memory' in performance)) return;
 
     setInterval(() => {
       const memory = (performance as any).memory;
@@ -173,7 +176,7 @@ class MetricsTracker {
   }
 
   trackNetworkRequests(): void {
-    if (!this.isEnabled) return;
+    if (!this.shouldTrack()) return;
 
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
@@ -209,7 +212,7 @@ class MetricsTracker {
 
   // Métriques business
   trackFeatureUsage(featureName: string): void {
-    if (!this.isEnabled) return;
+    if (!this.shouldTrack()) return;
 
     this.businessMetrics.featureUsage[featureName] =
       (this.businessMetrics.featureUsage[featureName] || 0) + 1;
@@ -219,7 +222,7 @@ class MetricsTracker {
   }
 
   trackConversionEvent(eventName: string, value: number = 1): void {
-    if (!this.isEnabled) return;
+    if (!this.shouldTrack()) return;
 
     this.businessMetrics.conversionEvents[eventName] =
       (this.businessMetrics.conversionEvents[eventName] || 0) + value;
@@ -229,7 +232,7 @@ class MetricsTracker {
   }
 
   trackUserSatisfaction(score: number): void {
-    if (!this.isEnabled) return;
+    if (!this.shouldTrack()) return;
 
     this.businessMetrics.userSatisfaction = score;
     this.addMetric('user_satisfaction', score, 'score', 'business');
@@ -243,6 +246,8 @@ class MetricsTracker {
     category: PerformanceMetric['category'],
     metadata?: Record<string, any>
   ): void {
+    if (!this.shouldTrack()) return;
+
     const metric: PerformanceMetric = {
       name,
       value,
@@ -361,6 +366,43 @@ class MetricsTracker {
 
   disable(): void {
     this.isEnabled = false;
+  }
+
+  // Gérer le consentement utilisateur
+  setUserConsent(consent: boolean): void {
+    this.userConsent = consent;
+    this.saveUserConsent();
+  }
+
+  // Définir le sampling rate
+  setSamplingRate(rate: number): void {
+    this.samplingRate = Math.max(0, Math.min(1, rate)); // Entre 0 et 1
+  }
+
+  // Vérifier si on doit tracker (sampling + consentement)
+  private shouldTrack(): boolean {
+    return this.isEnabled && this.userConsent && Math.random() <= this.samplingRate;
+  }
+
+  // Sauvegarder le consentement
+  private saveUserConsent(): void {
+    try {
+      localStorage.setItem('numa_metrics_consent', JSON.stringify(this.userConsent));
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du consentement metrics:', error);
+    }
+  }
+
+  // Charger le consentement
+  private loadUserConsent(): void {
+    try {
+      const stored = localStorage.getItem('numa_metrics_consent');
+      if (stored !== null) {
+        this.userConsent = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du consentement metrics:', error);
+    }
   }
 }
 

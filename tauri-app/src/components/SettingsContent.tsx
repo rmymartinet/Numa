@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SettingsTab from './SettingsTab';
+import PrivacyConsent from './PrivacyConsent';
 
 const SettingsContent: React.FC = () => {
   const [activeSettingsTab, setActiveSettingsTab] = React.useState<
-    'settings' | 'app' | 'profile' | 'security' | 'billing'
+    'settings' | 'app' | 'profile' | 'security' | 'billing' | 'privacy'
   >('settings');
+  const [showPrivacyConsent, setShowPrivacyConsent] = useState(false);
 
   const settingsTabs = [
     { id: 'settings' as const, label: 'General Settings', icon: '⚙️' },
@@ -12,6 +14,7 @@ const SettingsContent: React.FC = () => {
     { id: 'profile' as const, label: 'Profile Settings', icon: '👤' },
     { id: 'security' as const, label: 'Security Settings', icon: '🔒' },
     { id: 'billing' as const, label: 'Billing & Subscription', icon: '💳' },
+    { id: 'privacy' as const, label: 'Privacy & Analytics', icon: '🔍' },
   ];
 
   const renderTabContent = () => {
@@ -134,6 +137,25 @@ const SettingsContent: React.FC = () => {
             </div>
           </div>
         );
+      case 'privacy':
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Privacy & Analytics
+            </h3>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Contrôlez comment Numa collecte et utilise les données pour améliorer l'expérience utilisateur.
+              </p>
+              <button 
+                onClick={() => setShowPrivacyConsent(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-all duration-200"
+              >
+                Gérer les préférences de confidentialité
+              </button>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -161,6 +183,12 @@ const SettingsContent: React.FC = () => {
           {renderTabContent()}
         </div>
       </div>
+
+      {/* Privacy Consent Modal */}
+      <PrivacyConsent 
+        show={showPrivacyConsent}
+        onClose={() => setShowPrivacyConsent(false)}
+      />
     </div>
   );
 };
