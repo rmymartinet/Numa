@@ -3,10 +3,11 @@ import { forwardRef } from 'react';
 interface InputFieldProps {
   value: string;
   onChange: (text: string) => void;
+  onChatSubmit?: (message: string) => void;
 }
 
 const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
-  ({ value, onChange }, ref) => {
+  ({ value, onChange, onChatSubmit }, ref) => {
     return (
       <div
         style={{
@@ -33,7 +34,8 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
           }}
           onKeyPress={e => {
             if (e.key === 'Enter' && value.trim()) {
-              console.log('Prompt envoyé:', value);
+              console.log('Chat message envoyé:', value);
+              onChatSubmit?.(value.trim());
               onChange('');
             }
           }}

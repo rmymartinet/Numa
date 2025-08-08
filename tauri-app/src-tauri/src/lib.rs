@@ -6,6 +6,7 @@ mod errors;
 mod logging;
 mod validation;
 mod csp_manager;
+mod openai;
 #[cfg(test)]
 mod tests;
 
@@ -17,27 +18,27 @@ use tracing::{info, warn, error, debug};
 fn capture_screen_internal() -> Result<String, String> {
     use std::fs;
     use std::env;
-    
+
     // Capturer l'écran principal
     let screens = screenshots::Screen::all().map_err(|e| e.to_string())?;
     let screen = screens.first().ok_or("Aucun écran trouvé")?;
-    
+
     // Capturer l'écran complet
     let image = screen.capture().map_err(|e| e.to_string())?;
-    
+
     // Créer le dossier de sauvegarde dans le répertoire temporaire
     let temp_dir = env::temp_dir();
     let screenshots_dir = temp_dir.join("tauri-screenshots");
     fs::create_dir_all(&screenshots_dir).map_err(|e| e.to_string())?;
-    
+
     // Générer un nom de fichier unique
     let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
     let filename = format!("screenshot_{}.png", timestamp);
     let file_path = screenshots_dir.join(filename);
-    
+
     // Sauvegarder l'image
     image.save(&file_path).map_err(|e| e.to_string())?;
-    
+
     Ok(file_path.to_string_lossy().to_string())
 }
 
@@ -58,13 +59,13 @@ fn capture_and_analyze() -> String {
 fn get_image_as_base64(image_path: String) -> Result<String, String> {
     use std::fs;
     use base64::{Engine as _, engine::general_purpose};
-    
+
     // Lire le fichier image
     let image_data = fs::read(&image_path).map_err(|e| format!("Erreur de lecture: {}", e))?;
-    
+
     // Convertir en base64
     let base64_string = general_purpose::STANDARD.encode(&image_data);
-    
+
     // Déterminer le type MIME basé sur l'extension
     let mime_type = if image_path.ends_with(".png") {
         "image/png"
@@ -73,7 +74,7 @@ fn get_image_as_base64(image_path: String) -> Result<String, String> {
     } else {
         "image/png" // par défaut
     };
-    
+
     // Retourner l'URL data
     Ok(format!("data:{};base64,{}", mime_type, base64_string))
 }
@@ -97,14 +98,14 @@ fn start_window_dragging(app: AppHandle) -> tauri::Result<()> {
 #[tauri::command]
 fn resize_window(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
     use validation::{validate_and_rate_limit, WindowSize};
-    
+
     let size = WindowSize { width, height };
-    
+
     validate_and_rate_limit("resize_window", size, |validated_size| {
         if let Some(window) = app.get_webview_window("hud") {
-            window.set_size(tauri::Size::Logical(tauri::LogicalSize { 
-                width: validated_size.width, 
-                height: validated_size.height 
+            window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+                width: validated_size.width,
+                height: validated_size.height
             })).map_err(|e| e.to_string())?;
         }
         Ok(())
@@ -119,6 +120,12 @@ const PANEL_WIDTH: f64 = 1072.0;
 const PANEL_HEIGHT: f64 = 618.0;
 const PANEL_INITIAL_X: f64 = 200.0;
 const PANEL_INITIAL_Y: f64 = 490.0;
+
+// Configuration de la fenêtre response ChatGPT
+const RESPONSE_WIDTH: f64 = 600.0;
+const RESPONSE_HEIGHT: f64 = 400.0;
+const RESPONSE_INITIAL_X: f64 = 400.0;  // Même position que le panel
+const RESPONSE_INITIAL_Y: f64 = 490.0;  // Même position que le panel
 
 // Fonction d'aide pour appliquer l'état furtif actuel
 fn apply_current_stealth(app: &AppHandle, win: &tauri::WebviewWindow) -> tauri::Result<()> {
@@ -140,14 +147,14 @@ fn configure_panel_stealth(panel: &tauri::WebviewWindow, stealth: bool) -> tauri
             // — exclure du screen-capture —
             // 0 = NSWindowSharingNone
             let _: () = msg_send![win, setSharingType: 0];
-            
+
             // — garder les clics actifs pour l'interaction —
             // let _: () = msg_send![win, setIgnoresMouseEvents: true];
         } else {
             // — réactiver la capture —
             // 2 = NSWindowSharingReadWrite (comportement normal)
             let _: () = msg_send![win, setSharingType: 2];
-            
+
             // — réactiver les clics explicitement —
             let _: () = msg_send![win, setIgnoresMouseEvents: false];
         }
@@ -167,10 +174,10 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     if let Some(w) = app.get_webview_window("panel") {
         return Ok(w); // déjà créé
     }
-    
+
     let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let parent_ptr = hud.ns_window()?;
-    
+
     let panel = WebviewWindowBuilder::new(
         app,
         "panel",
@@ -185,27 +192,27 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     .closable(false)
     .skip_taskbar(true)
     .inner_size(PANEL_WIDTH, PANEL_HEIGHT)
-    .position(PANEL_INITIAL_X, PANEL_INITIAL_Y)                
+    .position(PANEL_INITIAL_X, PANEL_INITIAL_Y)
     .visible(false)
     .build()?;
-    
+
     // 🔑 Supprimer complètement les contours de la fenêtre sur macOS
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     unsafe {
         use objc::{class, msg_send, sel, sel_impl};
         use objc::runtime::Object;
         let panel_ns: *mut Object = panel.ns_window()? as *mut Object;
-        
+
         // 1) Fenêtre réellement transparente
         let clear: *mut Object = msg_send![class!(NSColor), clearColor];
         let _: () = msg_send![panel_ns, setOpaque: false];
         let _: () = msg_send![panel_ns, setBackgroundColor: clear];
-        
+
         // 2) Style borderless SANS ombre
         const BORDERLESS: u64 = 0; // == NSWindowStyleMaskBorderless
         let _: () = msg_send![panel_ns, setStyleMask: BORDERLESS];
         let _: () = msg_send![panel_ns, setHasShadow: false]; // ← appeler APRÈS setStyleMask
-        
+
         // 3) Appliquer le mode furtif si il est actif
         if app.state::<stealth::StealthState>().is_active() {
             println!("🔒 Applying stealth to newly created panel");
@@ -229,13 +236,13 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
         let _: () = msg_send![win, setAlphaValue: 1.0];
         let _: () = msg_send![win, setIgnoresMouseEvents: false];
     }
-    
+
     // 2) Appliquer l'état furtif actuel (0 si furtif, 2 sinon)
     apply_current_stealth(&app, &panel)?;
-    
+
     // 3) Afficher au-dessus du HUD
     panel.show()?;
-    
+
     Ok(())
 }
 
@@ -250,23 +257,144 @@ fn panel_hide(app: AppHandle) -> tauri::Result<()> {
             let _: () = msg_send![win, setAlphaValue: 0.0];
             let _: () = msg_send![win, setIgnoresMouseEvents: true];
         }
-        
+
         // 2) Appliquer l'état furtif actuel (reste 0 si furtif)
         apply_current_stealth(&app, &panel)?;
     }
     Ok(())
 }
 
+// === RESPONSE WINDOW MANAGEMENT ===
+
+fn ensure_response(app: &AppHandle) -> tauri::Result<WebviewWindow> {
+    if let Some(w) = app.get_webview_window("response") {
+        return Ok(w); // déjà créé
+    }
+
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let parent_ptr = hud.ns_window()?;
+
+    let response = WebviewWindowBuilder::new(
+        app,
+        "response",
+        WebviewUrl::External("http://localhost:1420/#/response".parse().unwrap()),
+    )
+    .parent_raw(parent_ptr)                 // Child window du HUD
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .resizable(false)
+    .minimizable(false)
+    .closable(false)
+    .skip_taskbar(true)
+    .inner_size(RESPONSE_WIDTH, RESPONSE_HEIGHT)
+    .position(RESPONSE_INITIAL_X, RESPONSE_INITIAL_Y)
+    .visible(false)
+    .build()?;
+
+    // Style macOS similaire au panel
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    unsafe {
+        use objc::{class, msg_send, sel, sel_impl};
+        use objc::runtime::Object;
+        let response_ns: *mut Object = response.ns_window()? as *mut Object;
+
+        // Fenêtre transparente
+        let clear: *mut Object = msg_send![class!(NSColor), clearColor];
+        let _: () = msg_send![response_ns, setOpaque: false];
+        let _: () = msg_send![response_ns, setBackgroundColor: clear];
+
+        // Style borderless sans ombre
+        const BORDERLESS: u64 = 0;
+        let _: () = msg_send![response_ns, setStyleMask: BORDERLESS];
+        let _: () = msg_send![response_ns, setHasShadow: false];
+
+        // Appliquer stealth si actif
+        if app.state::<stealth::StealthState>().is_active() {
+            let _: () = msg_send![response_ns, setSharingType: 0u64];
+        }
+    }
+    Ok(response)
+}
+
+#[tauri::command]
+fn response_show(app: AppHandle) -> tauri::Result<()> {
+    ensure_response(&app)?;
+    let response = app.get_webview_window("response").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Response window not found")))?;
+
+    // Rendre visible
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
+        let win = response.ns_window()? as *mut objc::runtime::Object;
+        let _: () = msg_send![win, setAlphaValue: 1.0];
+        let _: () = msg_send![win, setIgnoresMouseEvents: false];
+    }
+
+    // Appliquer l'état furtif actuel
+    apply_current_stealth(&app, &response)?;
+
+    response.show()?;
+    Ok(())
+}
+
+#[tauri::command]
+fn response_hide(app: AppHandle) -> tauri::Result<()> {
+    if let Some(response) = app.get_webview_window("response") {
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = response.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, setAlphaValue: 0.0];
+            let _: () = msg_send![win, setIgnoresMouseEvents: true];
+        }
+
+        apply_current_stealth(&app, &response)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
+    println!("🚀 start_chat called with message: {}", message);
+    
+    // Show response window first
+    ensure_response(&app)?;
+    println!("🚀 Response window ensured");
+    
+    let response = app.get_webview_window("response").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Response window not found")))?;
+    println!("🚀 Got response window");
+
+    // Make it visible
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
+        let win = response.ns_window()? as *mut objc::runtime::Object;
+        let _: () = msg_send![win, setAlphaValue: 1.0];
+        let _: () = msg_send![win, setIgnoresMouseEvents: false];
+    }
+    
+    apply_current_stealth(&app, &response)?;
+    response.show()?;
+    println!("🚀 Response window shown");
+
+    // Emit the event to the response window specifically
+    app.emit_to("response", "chat:start", serde_json::json!({ "message": message }))?;
+    println!("🚀 Event emitted to response window");
+    
+    Ok(())
+}
+
 #[tauri::command]
 fn toggle_stealth_cmd(app: AppHandle) -> Result<bool, String> {
     use validation::check_rate_limit;
-    
+
     // Rate limit cette commande sensible
     check_rate_limit("toggle_stealth_cmd").map_err(|e| e.to_string())?;
-    
+
     stealth::toggle_stealth(&app).map_err(|e| e.to_string())?;
     let active = app.state::<stealth::StealthState>().is_active();
-    
+
     // Émettre un événement enrichi avec métadonnées
     let _ = app.emit("stealth:changed", serde_json::json!({
         "active": active,
@@ -274,9 +402,9 @@ fn toggle_stealth_cmd(app: AppHandle) -> Result<bool, String> {
         "observability_disabled": active,
         "source": "manual_toggle"
     }));
-    
+
     info!("🔄 Stealth mode toggled: {} (manual)", if active { "ON" } else { "OFF" });
-    
+
     Ok(active)
 }
 
@@ -296,16 +424,16 @@ fn test_stealth_manual(app: AppHandle) {
 fn secure_store(key: String, value: String) -> Result<(), String> {
     use keyring::Entry;
     use validation::{validate_and_rate_limit, SecureKeyValue};
-    
+
     let kv = SecureKeyValue { key, value };
-    
+
     validate_and_rate_limit("secure_store", kv, |validated_kv| {
         let entry = Entry::new("numa", &validated_kv.key)
             .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
-        
+
         entry.set_password(&validated_kv.value)
             .map_err(|e| format!("Erreur lors du stockage sécurisé: {}", e))?;
-        
+
         Ok(())
     })
 }
@@ -314,13 +442,13 @@ fn secure_store(key: String, value: String) -> Result<(), String> {
 fn secure_load(key: String) -> Result<String, String> {
     use keyring::Entry;
     use validation::{validate_and_rate_limit, SecureKey};
-    
+
     let secure_key = SecureKey { key };
-    
+
     validate_and_rate_limit("secure_load", secure_key, |validated_key| {
         let entry = Entry::new("numa", &validated_key.key)
             .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
-        
+
         entry.get_password()
             .map_err(|e| format!("Erreur lors de la récupération sécurisée: {}", e))
     })
@@ -330,16 +458,16 @@ fn secure_load(key: String) -> Result<String, String> {
 fn secure_delete(key: String) -> Result<(), String> {
     use keyring::Entry;
     use validation::{validate_and_rate_limit, SecureKey};
-    
+
     let secure_key = SecureKey { key };
-    
+
     validate_and_rate_limit("secure_delete", secure_key, |validated_key| {
         let entry = Entry::new("numa", &validated_key.key)
             .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
-        
+
         entry.delete_password()
             .map_err(|e| format!("Erreur lors de la suppression sécurisée: {}", e))?;
-        
+
         Ok(())
     })
 }
@@ -364,14 +492,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(stealth::StealthState::default())
         .invoke_handler(tauri::generate_handler![
-            capture_and_analyze, 
-            capture_screen, 
-            get_image_as_base64, 
-            close_all_windows, 
-            start_window_dragging, 
-            resize_window, 
-            panel_show, 
+            capture_and_analyze,
+            capture_screen,
+            get_image_as_base64,
+            close_all_windows,
+            start_window_dragging,
+            resize_window,
+            panel_show,
             panel_hide,
+            response_show,
+            response_hide,
+            start_chat,
             toggle_stealth_cmd,
             get_stealth_status,
             test_stealth_manual,
@@ -379,7 +510,10 @@ pub fn run() {
             secure_load,
             secure_delete,
             csp_manager::get_dynamic_csp_policy,
-            csp_manager::get_csp_for_context
+            csp_manager::get_csp_for_context,
+            openai::chat_with_openai,
+            openai::store_openai_key,
+            openai::get_chat_config
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
@@ -388,18 +522,18 @@ pub fn run() {
         })
         .setup(|app| {
             info!("Setting up application...");
-            
+
             // Forcer le HUD au premier plan
             if let Some(hud_win) = app.get_webview_window("hud") {
                 hud_win.set_focus().ok();
                 info!("HUD window focused");
             }
-            
+
             // 🚀 Setup background tasks
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(1000));
-                
+
                 #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
                 {
                     if let Err(e) = stealth::force_stealth_on(&app_handle) {
@@ -408,12 +542,12 @@ pub fn run() {
                         info!("🕵️ Stealth mode activated on startup");
                     }
                 }
-                
+
                 #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
                 {
                     info!("🕵️ Skipping stealth activation - feature not enabled");
                 }
-                
+
                 // 🧹 Setup periodic rate limiter cleanup
                 let _app_handle_cleanup = app_handle.clone();
                 std::thread::spawn(move || {
@@ -423,7 +557,7 @@ pub fn run() {
                         debug!("🧹 Rate limiter cleanup completed");
                     }
                 });
-                
+
                 // Émettre un événement pour signaler que l'application est prête
                 if let Err(e) = app_handle.emit("app-ready", ()) {
                     error!("Failed to emit app-ready event: {}", e);
@@ -431,7 +565,7 @@ pub fn run() {
                     info!("App ready event emitted");
                 }
             });
-            
+
             info!("Application setup complete");
             Ok(())
         })

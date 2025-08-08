@@ -19,8 +19,8 @@ export const CSPManager: React.FC<CSPManagerProps> = ({ isOpen, onClose }) => {
     setConfig(getConfig());
   }, [isOpen, getConfig]);
 
-  const handleUpdateDirective = (directive: string, sources: string[]) => {
-    updateDirective(directive, sources);
+  const handleUpdateDirective = (_directive: string, _sources: string[]) => {
+    updateDirective(_directive, _sources);
     setConfig(getConfig());
   };
 

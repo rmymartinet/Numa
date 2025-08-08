@@ -70,7 +70,20 @@ const HUDBar: React.FC<HUDBarProps> = ({
     >
       <CaptureButton isListening={isListening} onCapture={onCapture} />
 
-      <InputField ref={inputRef} value={inputText} onChange={onInputChange} />
+      <InputField 
+        ref={inputRef} 
+        value={inputText} 
+        onChange={onInputChange} 
+        onChatSubmit={async (message: string) => {
+          try {
+            // Use the new start_chat command
+            await invoke('start_chat', { message });
+            console.log('Chat started:', message);
+          } catch (error) {
+            console.error('Error starting chat:', error);
+          }
+        }}
+      />
 
       <div
         style={{

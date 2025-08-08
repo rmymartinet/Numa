@@ -46,7 +46,7 @@ export function useStealthObservability() {
     const checkInitialStatus = async () => {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        const initialStatus = await invoke('get_stealth_status');
+        const initialStatus: boolean = await invoke('get_stealth_status');
         setStealthActive(initialStatus);
         adjustObservability(initialStatus);
       } catch (error) {
