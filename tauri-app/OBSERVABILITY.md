@@ -2,7 +2,58 @@
 
 Ce document décrit le système d'observabilité complet de Numa, incluant la gestion d'erreurs, le logging et les métriques.
 
+## 🚀 Améliorations Récentes
+
+### Initialisation Robuste
+
+L'initialisation de l'observabilité a été améliorée pour être plus robuste et éviter les conflits avec le rendu des fenêtres Tauri :
+
+- **Basée sur les événements** : Écoute `app-ready` puis `tauri://ready` avec fallbacks
+- **requestIdleCallback** : N'interfère pas avec le thread principal
+- **Import conditionnel** : Sentry et métriques chargés seulement si consentement donné
+- **Gestion d'erreurs** : Fallbacks multiples garantissent l'initialisation
+
+### 🔒 Règles de Stealth & Observabilité
+
+**Sécurité renforcée** : L'observabilité s'adapte automatiquement au mode furtif :
+
+- **Mode furtif actif** : Désactivation complète de l'observabilité avancée
+  - Sentry Replay désactivé
+  - Métriques désactivées (sampling rate = 0)
+  - Envoi réseau des logs désactivé
+- **Mode furtif inactif** : Réactivation selon le consentement utilisateur
+- **Écoute en temps réel** : Réagit automatiquement aux changements de mode
+
+Voir `OBSERVABILITY_IMPROVEMENTS.md` pour plus de détails.
+
 ## Architecture
+
+### 🔒 Règles de Sécurité Stealth
+
+**Principe** : Quand le mode furtif est actif, l'observabilité est réduite au strict minimum pour éviter toute fuite d'informations.
+
+#### Guard Global Automatique
+
+```typescript
+// Dans useStealthObservability.ts
+if (stealthActive) {
+  disableReplay();           // Désactiver Sentry Replay
+  metricsTracker.setSamplingRate(0);  // Pas de métriques
+  logger.setNetworkOff(true);         // Pas d'envoi réseau
+}
+```
+
+#### Comportements par Mode
+
+| Mode | Sentry Replay | Métriques | Logs Réseau | Capture Écran | PII |
+|------|---------------|-----------|-------------|---------------|-----|
+| **Normal** | ✅ Consentement | ✅ Consentement | ✅ Consentement | ✅ Consentement | ✅ Consentement |
+| **Stealth** | ❌ Désactivé | ❌ Désactivé | ❌ Désactivé | ❌ Désactivé | ❌ Désactivé |
+
+#### Événements Écoutés
+
+- `stealth-activated` : Désactive immédiatement l'observabilité
+- `stealth-deactivated` : Réactive selon le consentement utilisateur
 
 ### 1. Error Reporting (Sentry)
 

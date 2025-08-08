@@ -191,6 +191,18 @@ class ErrorReporter {
     }
   }
 
+  disableReplay(): void {
+    try {
+      // Désactiver le replay de session
+      if (Sentry.getReplay()) {
+        Sentry.getReplay()?.stop();
+      }
+      console.log('Sentry Replay désactivé');
+    } catch (error) {
+      console.warn('Erreur lors de la désactivation du replay Sentry:', error);
+    }
+  }
+
   // Obtenir le statut
   getStatus(): { enabled: boolean; initialized: boolean; userConsent: boolean } {
     return {

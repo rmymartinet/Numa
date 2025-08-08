@@ -228,6 +228,19 @@ class Logger {
     this.initializeBatchSending();
   }
 
+  // Désactiver/réactiver l'envoi réseau
+  setNetworkOff(off: boolean): void {
+    if (off) {
+      this.config.enableBatchSending = false;
+      this.stopBatchTimer();
+      this.info('Envoi réseau des logs désactivé');
+    } else {
+      this.config.enableBatchSending = true;
+      this.initializeBatchSending();
+      this.info('Envoi réseau des logs réactivé');
+    }
+  }
+
   // Initialiser l'envoi batch
   private initializeBatchSending(): void {
     if (this.config.enableBatchSending && this.config.userConsent) {

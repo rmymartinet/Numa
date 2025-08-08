@@ -6,7 +6,7 @@ mod errors;
 #[cfg(test)]
 mod tests;
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
 use tracing::{info, warn, error};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -306,6 +306,13 @@ pub fn run() {
                 std::thread::sleep(std::time::Duration::from_millis(1000));
                 if let Err(e) = stealth::force_stealth_on(&app_handle) {
                     error!("Failed to force stealth on: {}", e);
+                }
+                
+                // Émettre un événement pour signaler que l'application est prête
+                if let Err(e) = app_handle.emit("app-ready", ()) {
+                    error!("Failed to emit app-ready event: {}", e);
+                } else {
+                    info!("App ready event emitted");
                 }
             });
             
