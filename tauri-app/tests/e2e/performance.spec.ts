@@ -8,7 +8,9 @@ test.describe('Performance E2E Tests', () => {
   test('should load within performance budget', async ({ page }) => {
     // Mesurer le temps de chargement initial
     const loadTime = await page.evaluate(() => {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const navigation = performance.getEntriesByType(
+        'navigation'
+      )[0] as PerformanceNavigationTiming;
       return navigation.loadEventEnd - navigation.loadEventStart;
     });
 
@@ -22,8 +24,8 @@ test.describe('Performance E2E Tests', () => {
 
     // Mesurer LCP (Largest Contentful Paint)
     const lcp = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        new PerformanceObserver((list) => {
+      return new Promise(resolve => {
+        new PerformanceObserver(list => {
           const entries = list.getEntries();
           const lastEntry = entries[entries.length - 1];
           resolve(lastEntry.startTime);
@@ -48,7 +50,8 @@ test.describe('Performance E2E Tests', () => {
     }
 
     // Temps de réponse moyen doit être inférieur à 100ms
-    const averageTime = interactionTimes.reduce((a, b) => a + b, 0) / interactionTimes.length;
+    const averageTime =
+      interactionTimes.reduce((a, b) => a + b, 0) / interactionTimes.length;
     expect(averageTime).toBeLessThan(100);
   });
 
@@ -87,8 +90,11 @@ test.describe('Performance E2E Tests', () => {
     });
 
     // Calculer la taille totale
-    const totalSize = resources.reduce((sum, resource) => sum + (resource.size || 0), 0);
-    
+    const totalSize = resources.reduce(
+      (sum, resource) => sum + (resource.size || 0),
+      0
+    );
+
     // Taille totale ne doit pas dépasser 2MB
     expect(totalSize).toBeLessThan(2 * 1024 * 1024);
   });
@@ -114,16 +120,18 @@ test.describe('Performance E2E Tests', () => {
     const frameRates: number[] = [];
 
     await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>(resolve => {
         let frameCount = 0;
         let lastTime = performance.now();
 
         function measureFPS() {
           frameCount++;
           const currentTime = performance.now();
-          
+
           if (currentTime - lastTime >= 1000) {
-            const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+            const fps = Math.round(
+              (frameCount * 1000) / (currentTime - lastTime)
+            );
             frameRates.push(fps);
             frameCount = 0;
             lastTime = currentTime;
@@ -141,7 +149,8 @@ test.describe('Performance E2E Tests', () => {
     });
 
     // FPS moyen doit être supérieur à 30
-    const averageFPS = frameRates.reduce((a, b) => a + b, 0) / frameRates.length;
+    const averageFPS =
+      frameRates.reduce((a, b) => a + b, 0) / frameRates.length;
     expect(averageFPS).toBeGreaterThan(30);
   });
 
@@ -168,10 +177,12 @@ test.describe('Performance E2E Tests', () => {
 
     for (let i = 0; i < 5; i++) {
       const startTime = performance.now();
-      
+
       await page.evaluate(() => {
         // Simuler une mise à jour DOM complexe
-        const container = document.querySelector('[data-testid="hud-container"]');
+        const container = document.querySelector(
+          '[data-testid="hud-container"]'
+        );
         if (container) {
           container.innerHTML = `<div>Update ${Date.now()}</div>`;
         }
@@ -182,7 +193,8 @@ test.describe('Performance E2E Tests', () => {
     }
 
     // Temps moyen de mise à jour DOM doit être inférieur à 16ms (60fps)
-    const averageUpdateTime = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length;
+    const averageUpdateTime =
+      updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length;
     expect(averageUpdateTime).toBeLessThan(16);
   });
 
@@ -208,7 +220,9 @@ test.describe('Performance E2E Tests', () => {
     // Vérifier que l'application reste responsive
     const responseTime = await page.evaluate(() => {
       const start = performance.now();
-      const button = document.querySelector('[data-testid="toggle-panel-button"]') as HTMLElement;
+      const button = document.querySelector(
+        '[data-testid="toggle-panel-button"]'
+      ) as HTMLElement;
       button?.click();
       return performance.now() - start;
     });

@@ -36,7 +36,7 @@ class MetricsTracker {
   constructor() {
     this.sessionId = this.generateSessionId();
     this.isEnabled = process.env.NODE_ENV === 'production';
-    
+
     this.userMetrics = {
       sessionId: this.sessionId,
       pageViews: 0,
@@ -76,13 +76,36 @@ class MetricsTracker {
     if (!this.isEnabled) return;
 
     window.addEventListener('load', () => {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-      
-      this.addMetric('page_load_time', navigation.loadEventEnd - navigation.loadEventStart, 'ms', 'performance');
-      this.addMetric('dom_content_loaded', navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart, 'ms', 'performance');
+      const navigation = performance.getEntriesByType(
+        'navigation'
+      )[0] as PerformanceNavigationTiming;
+
+      this.addMetric(
+        'page_load_time',
+        navigation.loadEventEnd - navigation.loadEventStart,
+        'ms',
+        'performance'
+      );
+      this.addMetric(
+        'dom_content_loaded',
+        navigation.domContentLoadedEventEnd -
+          navigation.domContentLoadedEventStart,
+        'ms',
+        'performance'
+      );
       this.addMetric('first_paint', this.getFirstPaint(), 'ms', 'performance');
-      this.addMetric('first_contentful_paint', this.getFirstContentfulPaint(), 'ms', 'performance');
-      this.addMetric('largest_contentful_paint', this.getLargestContentfulPaint(), 'ms', 'performance');
+      this.addMetric(
+        'first_contentful_paint',
+        this.getFirstContentfulPaint(),
+        'ms',
+        'performance'
+      );
+      this.addMetric(
+        'largest_contentful_paint',
+        this.getLargestContentfulPaint(),
+        'ms',
+        'performance'
+      );
     });
   }
 
@@ -105,7 +128,7 @@ class MetricsTracker {
   trackErrors(): void {
     if (!this.isEnabled) return;
 
-    window.addEventListener('error', (event) => {
+    window.addEventListener('error', event => {
       this.userMetrics.errors++;
       this.addMetric('javascript_error', 1, 'count', 'error', {
         message: event.message,
@@ -115,7 +138,7 @@ class MetricsTracker {
       });
     });
 
-    window.addEventListener('unhandledrejection', (event) => {
+    window.addEventListener('unhandledrejection', event => {
       this.userMetrics.errors++;
       this.addMetric('unhandled_promise_rejection', 1, 'count', 'error', {
         reason: event.reason,
@@ -128,9 +151,24 @@ class MetricsTracker {
 
     setInterval(() => {
       const memory = (performance as any).memory;
-      this.addMetric('memory_used', memory.usedJSHeapSize, 'bytes', 'performance');
-      this.addMetric('memory_total', memory.totalJSHeapSize, 'bytes', 'performance');
-      this.addMetric('memory_limit', memory.jsHeapSizeLimit, 'bytes', 'performance');
+      this.addMetric(
+        'memory_used',
+        memory.usedJSHeapSize,
+        'bytes',
+        'performance'
+      );
+      this.addMetric(
+        'memory_total',
+        memory.totalJSHeapSize,
+        'bytes',
+        'performance'
+      );
+      this.addMetric(
+        'memory_limit',
+        memory.jsHeapSizeLimit,
+        'bytes',
+        'performance'
+      );
     }, 30000); // Toutes les 30 secondes
   }
 
@@ -143,13 +181,20 @@ class MetricsTracker {
       try {
         const response = await originalFetch(...args);
         const duration = performance.now() - startTime;
-        
-        this.addMetric('network_request_duration', duration, 'ms', 'performance', {
-          url: typeof args[0] === 'string' ? args[0] : (args[0] as Request).url,
-          method: args[1]?.method || 'GET',
-          status: response.status,
-        });
-        
+
+        this.addMetric(
+          'network_request_duration',
+          duration,
+          'ms',
+          'performance',
+          {
+            url:
+              typeof args[0] === 'string' ? args[0] : (args[0] as Request).url,
+            method: args[1]?.method || 'GET',
+            status: response.status,
+          }
+        );
+
         return response;
       } catch (error) {
         const duration = performance.now() - startTime;
@@ -166,15 +211,21 @@ class MetricsTracker {
   trackFeatureUsage(featureName: string): void {
     if (!this.isEnabled) return;
 
-    this.businessMetrics.featureUsage[featureName] = (this.businessMetrics.featureUsage[featureName] || 0) + 1;
-    this.addMetric('feature_usage', 1, 'count', 'business', { feature: featureName });
+    this.businessMetrics.featureUsage[featureName] =
+      (this.businessMetrics.featureUsage[featureName] || 0) + 1;
+    this.addMetric('feature_usage', 1, 'count', 'business', {
+      feature: featureName,
+    });
   }
 
   trackConversionEvent(eventName: string, value: number = 1): void {
     if (!this.isEnabled) return;
 
-    this.businessMetrics.conversionEvents[eventName] = (this.businessMetrics.conversionEvents[eventName] || 0) + value;
-    this.addMetric('conversion_event', value, 'count', 'business', { event: eventName });
+    this.businessMetrics.conversionEvents[eventName] =
+      (this.businessMetrics.conversionEvents[eventName] || 0) + value;
+    this.addMetric('conversion_event', value, 'count', 'business', {
+      event: eventName,
+    });
   }
 
   trackUserSatisfaction(score: number): void {
@@ -185,7 +236,13 @@ class MetricsTracker {
   }
 
   // Métriques personnalisées
-  addMetric(name: string, value: number, unit: string, category: PerformanceMetric['category'], metadata?: Record<string, any>): void {
+  addMetric(
+    name: string,
+    value: number,
+    unit: string,
+    category: PerformanceMetric['category'],
+    metadata?: Record<string, any>
+  ): void {
     const metric: PerformanceMetric = {
       name,
       value,
@@ -208,7 +265,9 @@ class MetricsTracker {
 
   private getFirstContentfulPaint(): number {
     const paintEntries = performance.getEntriesByType('paint');
-    const fcp = paintEntries.find(entry => entry.name === 'first-contentful-paint');
+    const fcp = paintEntries.find(
+      entry => entry.name === 'first-contentful-paint'
+    );
     return fcp ? fcp.startTime : 0;
   }
 
@@ -218,7 +277,10 @@ class MetricsTracker {
     return lcp ? lcp.startTime : 0;
   }
 
-  private debounce(func: (...args: any[]) => void, wait: number): (event: Event) => void {
+  private debounce(
+    func: (...args: any[]) => void,
+    wait: number
+  ): (event: Event) => void {
     let timeout: NodeJS.Timeout;
     return function executedFunction(event: Event) {
       const later = () => {
@@ -271,11 +333,13 @@ class MetricsTracker {
 
   private checkAlerts(metrics: any): void {
     // Importer dynamiquement pour éviter les dépendances circulaires
-    import('./alerts').then(({ alertManager }) => {
-      alertManager.checkAlerts(metrics);
-    }).catch(() => {
-      // Ignorer si le module n'est pas disponible
-    });
+    import('./alerts')
+      .then(({ alertManager }) => {
+        alertManager.checkAlerts(metrics);
+      })
+      .catch(() => {
+        // Ignorer si le module n'est pas disponible
+      });
   }
 
   // API publique
@@ -317,7 +381,13 @@ export function useMetrics() {
     metricsTracker.trackUserSatisfaction(score);
   };
 
-  const addMetric = (name: string, value: number, unit: string, category: PerformanceMetric['category'], metadata?: Record<string, any>) => {
+  const addMetric = (
+    name: string,
+    value: number,
+    unit: string,
+    category: PerformanceMetric['category'],
+    metadata?: Record<string, any>
+  ) => {
     metricsTracker.addMetric(name, value, unit, category, metadata);
   };
 

@@ -1,7 +1,7 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
-import { resolve } from "path";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import { resolve } from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
 import compression from 'vite-plugin-compression';
 
@@ -10,7 +10,7 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(), 
+    react(),
     tailwindcss(),
     visualizer({
       filename: 'dist/stats.html',
@@ -25,7 +25,7 @@ export default defineConfig({
     compression({
       algorithm: 'brotliCompress',
       ext: '.br',
-    })
+    }),
   ],
 
   // Optimisations de build
@@ -38,17 +38,16 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           ui: ['framer-motion', 'lucide-react'],
-          ocr: ['tesseract.js']
-        }
-      }
+          ocr: ['tesseract.js'],
+        },
+      },
     },
-
   },
 
   // Optimisations de développement
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
-    exclude: ['@tauri-apps/api']
+    exclude: ['@tauri-apps/api'],
   },
 
   // Alias pour les imports
@@ -58,8 +57,8 @@ export default defineConfig({
       '@components': resolve(process.cwd(), 'src/components'),
       '@pages': resolve(process.cwd(), 'src/pages'),
       '@utils': resolve(process.cwd(), 'src/utils'),
-      '@hooks': resolve(process.cwd(), 'src/hooks')
-    }
+      '@hooks': resolve(process.cwd(), 'src/hooks'),
+    },
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
@@ -73,14 +72,14 @@ export default defineConfig({
     host: host || false,
     hmr: host
       ? {
-          protocol: "ws",
+          protocol: 'ws',
           host,
           port: 1421,
         }
       : undefined,
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      ignored: ['**/src-tauri/**'],
     },
   },
 });

@@ -1,9 +1,9 @@
 // Exemple d'utilisation du client d'invocation typé
-import TauriClient, { 
-  getStealthStatus, 
-  toggleStealth, 
+import TauriClient, {
+  getStealthStatus,
+  toggleStealth,
   getImageAsBase64,
-  resizeWindow 
+  resizeWindow,
 } from './tauriClient';
 import { COMMAND_NAMES } from './commands';
 
@@ -17,16 +17,17 @@ import { COMMAND_NAMES } from './commands';
 export async function exampleDirectClient() {
   try {
     // Invoke avec validation automatique
-    const stealthStatus = await TauriClient.invoke(COMMAND_NAMES.GET_STEALTH_STATUS);
+    const stealthStatus = await TauriClient.invoke(
+      COMMAND_NAMES.GET_STEALTH_STATUS
+    );
     console.log('Status furtif:', stealthStatus); // Type: boolean
-    
+
     // Invoke avec arguments
     const imageData = await TauriClient.invokeWithArgs(
-      COMMAND_NAMES.GET_IMAGE_AS_BASE64, 
-      { imagePath: "/path/to/image.png" }
+      COMMAND_NAMES.GET_IMAGE_AS_BASE64,
+      { imagePath: '/path/to/image.png' }
     );
     console.log('Image data:', imageData); // Type: string (data:image/...)
-    
   } catch (error) {
     console.error('Erreur:', error);
   }
@@ -40,16 +41,15 @@ export async function exampleSpecializedFunctions() {
     // Fonctions avec validation automatique
     const isStealthActive = await getStealthStatus();
     console.log('Mode furtif actif:', isStealthActive);
-    
+
     await toggleStealth();
     console.log('Mode furtif basculé');
-    
-    const imageData = await getImageAsBase64("/path/to/image.png");
+
+    const imageData = await getImageAsBase64('/path/to/image.png');
     console.log('Image chargée:', imageData.startsWith('data:image/'));
-    
+
     await resizeWindow(800, 600);
     console.log('Fenêtre redimensionnée');
-    
   } catch (error) {
     console.error('Erreur:', error);
   }
@@ -61,14 +61,14 @@ export async function exampleSpecializedFunctions() {
 export async function exampleErrorHandling() {
   try {
     // Ceci va échouer car imagePath est vide
-    await getImageAsBase64("");
+    await getImageAsBase64('');
   } catch (error) {
     if (error instanceof Error) {
       console.log('Erreur de validation:', error.message);
       // Affiche: "Le chemin de l'image est requis"
     }
   }
-  
+
   try {
     // Ceci va échouer car width est négatif
     await resizeWindow(-100, 100);
@@ -93,7 +93,7 @@ export function useStealthExample() {
       console.error('Erreur lors du toggle:', error);
     }
   };
-  
+
   return { handleToggleStealth };
 }
 

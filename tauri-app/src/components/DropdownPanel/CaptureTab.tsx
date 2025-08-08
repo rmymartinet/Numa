@@ -70,7 +70,7 @@ const CaptureTab: React.FC<CaptureTabProps> = ({
           >
             {isProcessing ? (
               <>
-                <LoadingSpinner size='sm' color='white' variant='dots' />
+                <LoadingSpinner size="sm" color="white" variant="dots" />
                 <span>Traitement...</span>
               </>
             ) : (

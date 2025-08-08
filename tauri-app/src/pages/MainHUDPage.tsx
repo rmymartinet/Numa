@@ -33,7 +33,10 @@ const MainHUDPage: React.FC = () => {
   const [_activeTab, setActiveTab] = useState<TabType>(preferences.activeTab); // Utilisé dans handleTabChange
   const logger = useLogger('MainHUDPage');
   const { toggleTheme } = useTheme();
-  const { trackFeatureUsage: _trackFeatureUsage, trackConversionEvent: _trackConversionEvent } = useMetrics();
+  const {
+    trackFeatureUsage: _trackFeatureUsage,
+    trackConversionEvent: _trackConversionEvent,
+  } = useMetrics();
   const { alerts } = useAlerts();
   const [showMetricsDashboard, setShowMetricsDashboard] = useState(false);
   const [showAlertsPanel, setShowAlertsPanel] = useState(false);
@@ -152,15 +155,21 @@ const MainHUDPage: React.FC = () => {
         });
 
         // Écouter les événements de mode furtif
-        const unlistenStealthActivated = await listen('stealth-activated', () => {
-          console.log('Mode furtif activé');
-          setShortcutStatus('Mode furtif activé - invisible aux captures');
-        });
+        const unlistenStealthActivated = await listen(
+          'stealth-activated',
+          () => {
+            console.log('Mode furtif activé');
+            setShortcutStatus('Mode furtif activé - invisible aux captures');
+          }
+        );
 
-        const unlistenStealthDeactivated = await listen('stealth-deactivated', () => {
-          console.log('Mode furtif désactivé');
-          setShortcutStatus('Mode furtif désactivé');
-        });
+        const unlistenStealthDeactivated = await listen(
+          'stealth-deactivated',
+          () => {
+            console.log('Mode furtif désactivé');
+            setShortcutStatus('Mode furtif désactivé');
+          }
+        );
 
         return () => {
           unlistenGlobalShortcut();
@@ -250,7 +259,7 @@ const MainHUDPage: React.FC = () => {
 
   return (
     <div
-      className='hud-container'
+      className="hud-container"
       data-hud-content
       style={{
         width: '100vw',
@@ -296,8 +305,8 @@ const MainHUDPage: React.FC = () => {
       <button
         onClick={() => setShowAlertsPanel(true)}
         className={`fixed bottom-4 right-16 rounded-full p-3 shadow-lg z-40 ${
-          alerts.length > 0 
-            ? 'bg-red-500 hover:bg-red-600 text-white' 
+          alerts.length > 0
+            ? 'bg-red-500 hover:bg-red-600 text-white'
             : 'bg-gray-500 hover:bg-gray-600 text-white'
         }`}
         title={`Centre d'alertes (${alerts.length} alerte${alerts.length > 1 ? 's' : ''})`}

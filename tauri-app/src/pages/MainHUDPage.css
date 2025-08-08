@@ -16,7 +16,9 @@
 }
 
 /* Supprimer les contours de la fenêtre */
-body, html, #root {
+body,
+html,
+#root {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;

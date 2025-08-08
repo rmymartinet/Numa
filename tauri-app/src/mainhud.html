@@ -1,106 +1,100 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Numa - Assistant IA Desktop">
-    <meta name="theme-color" content="#ff6b6b">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Numa - Assistant IA Desktop" />
+    <meta name="theme-color" content="#ff6b6b" />
     <title>MainHUD</title>
-    <link rel="stylesheet" href="./styles/mainhud.css">
+    <link rel="stylesheet" href="./styles/mainhud.css" />
     <!-- Preload critical resources -->
-    <link rel="preload" href="./styles/mainhud.css" as="style">
-</head>
-<body>
+    <link rel="preload" href="./styles/mainhud.css" as="style" />
+  </head>
+  <body>
     <div class="mainhud-container">
-        <div class="mainhud-content">
-            MainHUD - Contrôle principal
-        </div>
-        <div class="mainhud-controls">
-            <button class="control-btn" onclick="capture()">
-                📊 Capture
-            </button>
-            <button class="control-btn" onclick="ask()">
-                💬 I Ask...
-            </button>
-            <button class="control-btn hide-btn" onclick="hideNuma()">
-                ⬆️ Hide
-            </button>
-            <button class="close-btn" onclick="closeHUD()">×</button>
-        </div>
+      <div class="mainhud-content">MainHUD - Contrôle principal</div>
+      <div class="mainhud-controls">
+        <button class="control-btn" onclick="capture()">📊 Capture</button>
+        <button class="control-btn" onclick="ask()">💬 I Ask...</button>
+        <button class="control-btn hide-btn" onclick="hideNuma()">
+          ⬆️ Hide
+        </button>
+        <button class="close-btn" onclick="closeHUD()">×</button>
+      </div>
     </div>
 
     <script>
-        const { invoke } = window.__TAURI__;
+      const { invoke } = window.__TAURI__;
 
-        async function capture() {
-            try {
-                const result = await invoke('capture_screen');
-                console.log('Capture:', result);
-            } catch (error) {
-                console.error('Erreur capture:', error);
-            }
+      async function capture() {
+        try {
+          const result = await invoke('capture_screen');
+          console.log('Capture:', result);
+        } catch (error) {
+          console.error('Erreur capture:', error);
         }
+      }
 
-        async function ask() {
-            console.log('Fonction Ask...');
-            // TODO: Implémenter la fonction Ask
+      async function ask() {
+        console.log('Fonction Ask...');
+        // TODO: Implémenter la fonction Ask
+      }
+
+      async function hideNuma() {
+        try {
+          // Basculer l'affichage de Numa (show/hide)
+          await invoke('toggle_numa_visibility');
+          console.log('Visibilité Numa basculée');
+        } catch (error) {
+          console.error('Erreur basculement Numa:', error);
         }
+      }
 
-        async function hideNuma() {
-            try {
-                // Basculer l'affichage de Numa (show/hide)
-                await invoke('toggle_numa_visibility');
-                console.log('Visibilité Numa basculée');
-            } catch (error) {
-                console.error('Erreur basculement Numa:', error);
-            }
+      async function closeHUD() {
+        try {
+          // Fermer le MainHUD
+          window.close();
+        } catch (error) {
+          console.error('Erreur fermeture HUD:', error);
         }
+      }
 
-        async function closeHUD() {
-            try {
-                // Fermer le MainHUD
-                window.close();
-            } catch (error) {
-                console.error('Erreur fermeture HUD:', error);
-            }
-        }
+      // Rendre la fenêtre déplaçable
+      let isDragging = false;
+      let dragOffset = { x: 0, y: 0 };
 
-        // Rendre la fenêtre déplaçable
-        let isDragging = false;
-        let dragOffset = { x: 0, y: 0 };
-
-        // Forcer le focus au chargement
-        window.addEventListener('load', () => {
-            invoke('focus_mainhud').catch(error => {
-                console.error('Erreur focus MainHUD:', error);
-            });
+      // Forcer le focus au chargement
+      window.addEventListener('load', () => {
+        invoke('focus_mainhud').catch(error => {
+          console.error('Erreur focus MainHUD:', error);
         });
+      });
 
-        document.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.control-btn, .close-btn')) return;
-            
-            isDragging = true;
-            const rect = e.target.getBoundingClientRect();
-            dragOffset.x = e.clientX - rect.left;
-            dragOffset.y = e.clientY - rect.top;
-        });
+      document.addEventListener('mousedown', e => {
+        if (e.target.closest('.control-btn, .close-btn')) return;
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            // Déplacer cette fenêtre et Numa ensemble
-            const newX = e.clientX - dragOffset.x;
-            const newY = e.clientY - dragOffset.y;
-            
-            // Appeler la commande Tauri pour déplacer les deux fenêtres
-            invoke('move_mainhud_with_numa', { x: newX, y: newY }).catch(error => {
-                console.error('Erreur déplacement fenêtres:', error);
-            });
-        });
+        isDragging = true;
+        const rect = e.target.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+      });
 
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
+      document.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+
+        // Déplacer cette fenêtre et Numa ensemble
+        const newX = e.clientX - dragOffset.x;
+        const newY = e.clientY - dragOffset.y;
+
+        // Appeler la commande Tauri pour déplacer les deux fenêtres
+        invoke('move_mainhud_with_numa', { x: newX, y: newY }).catch(error => {
+          console.error('Erreur déplacement fenêtres:', error);
         });
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
     </script>
-</body>
-</html> 
+  </body>
+</html>

@@ -16,10 +16,10 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
       >
         <input
           ref={ref}
-          type='text'
+          type="text"
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder='I Ask...'
+          placeholder="I Ask..."
           style={{
             width: '100%',
             padding: '8px 16px',

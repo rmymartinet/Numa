@@ -7,22 +7,28 @@ interface StealthControlProps {
   onClose?: () => void;
 }
 
-const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onClose }) => {
+const StealthControl: React.FC<StealthControlProps> = ({
+  isVisible = false,
+  onClose,
+}) => {
   const [isStealthMode, setIsStealthMode] = useState(false);
   const [detectedApps, setDetectedApps] = useState<string[]>([]);
   const [lastEvent, setLastEvent] = useState<string>('');
 
   useEffect(() => {
     // Écouter les événements de mode furtif
-    const unlistenStealthActivated = listen('stealth-mode-activated', (event) => {
+    const unlistenStealthActivated = listen('stealth-mode-activated', event => {
       setLastEvent(event.payload as string);
       setIsStealthMode(true);
     });
 
-    const unlistenStealthDeactivated = listen('stealth-mode-deactivated', (event) => {
-      setLastEvent(event.payload as string);
-      setIsStealthMode(false);
-    });
+    const unlistenStealthDeactivated = listen(
+      'stealth-mode-deactivated',
+      event => {
+        setLastEvent(event.payload as string);
+        setIsStealthMode(false);
+      }
+    );
 
     // Charger l'état initial
     loadStealthStatus();
@@ -89,11 +95,13 @@ const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onCl
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Mode Furtif
             </h3>
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-              isStealthMode 
-                ? 'bg-green-500 text-white' 
-                : 'bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
-            }`}>
+            <div
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                isStealthMode
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+              }`}
+            >
               {isStealthMode ? 'ACTIF' : 'INACTIF'}
             </div>
           </div>
@@ -106,7 +114,9 @@ const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onCl
                 : 'bg-blue-500 hover:bg-blue-600 text-white'
             }`}
           >
-            {isStealthMode ? '🛡️ Désactiver le Mode Furtif' : '🛡️ Activer le Mode Furtif'}
+            {isStealthMode
+              ? '🛡️ Désactiver le Mode Furtif'
+              : '🛡️ Activer le Mode Furtif'}
           </button>
         </div>
 
@@ -115,7 +125,7 @@ const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onCl
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
             📹 Apps de Réunion Détectées
           </h3>
-          
+
           {detectedApps.length === 0 ? (
             <div className="text-gray-500 dark:text-gray-400 text-center py-4">
               Aucune app de réunion détectée
@@ -161,7 +171,7 @@ const StealthControl: React.FC<StealthControlProps> = ({ isVisible = false, onCl
           >
             🔄 Actualiser
           </button>
-          
+
           <button
             onClick={() => {
               setLastEvent('');

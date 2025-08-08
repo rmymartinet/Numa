@@ -1,7 +1,10 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   margin: 0;
@@ -21,7 +24,8 @@ html {
 }
 
 /* Supprimer tous les contours et bordures */
-html, body {
+html,
+body {
   border: none !important;
   outline: none !important;
 }
@@ -48,4 +52,4 @@ html, body {
 * {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
-} 
+}

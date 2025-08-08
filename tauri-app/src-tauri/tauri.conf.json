@@ -3,31 +3,31 @@
   "productName": "tauri-app",
   "version": "0.1.0",
   "identifier": "com.martinet.veil",
-                "build": {
-                "beforeDevCommand": "",
-                "devUrl": "http://localhost:1420",
-                "beforeBuildCommand": "npm run build",
-                "frontendDist": "../dist"
-              },
-                    "app": {
-                    "windows": [
-                  {
-                    "title": "Numa - AI Assistant",
-                    "label": "hud",
-                    "url": "http://localhost:1420/#/hud",
-                    "width": 600,
-                    "height": 64,
-                    "resizable": false,
-                    "decorations": false,
-                    "minimizable": false,
-                    "transparent": true,
-                    "alwaysOnTop": true,
-                    "skipTaskbar": true,
-                    "visible": true,
-                    "center": true,
-                                        "closable": true
-                  }
-                ],
+  "build": {
+    "beforeDevCommand": "",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Numa - AI Assistant",
+        "label": "hud",
+        "url": "http://localhost:1420/#/hud",
+        "width": 600,
+        "height": 64,
+        "resizable": false,
+        "decorations": false,
+        "minimizable": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": true,
+        "center": true,
+        "closable": true
+      }
+    ],
     "security": {
       "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';"
     },

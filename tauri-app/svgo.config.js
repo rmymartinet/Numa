@@ -44,6 +44,6 @@ export default {
     'removeUnusedNS',
     'sortDefsChildren',
     'removeTitle',
-    'removeDesc'
+    'removeDesc',
   ],
 };

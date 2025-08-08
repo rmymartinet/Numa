@@ -27,9 +27,7 @@
   },
   "updater": {
     "active": false,
-    "endpoints": [
-      "https://releases.myapp.com/{{target}}/{{current_version}}"
-    ],
+    "endpoints": ["https://releases.myapp.com/{{target}}/{{current_version}}"],
     "dialog": true,
     "pubkey": "YOUR_PUBLIC_KEY_HERE"
   }

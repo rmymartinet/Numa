@@ -60,21 +60,28 @@ class AlertManager {
     this.addRule({
       id: 'high-memory-usage',
       name: 'Utilisation mémoire élevée',
-      description: 'L\'utilisation mémoire dépasse 80% de la limite',
+      description: "L'utilisation mémoire dépasse 80% de la limite",
       category: 'performance',
       severity: 'high',
       threshold: 80,
       unit: '%',
       cooldown: 60000, // 1 minute
-      condition: (_metrics) => {
+      condition: _metrics => {
         const memory = (performance as any).memory;
         if (!memory) return false;
-        const usagePercent = (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100;
+        const usagePercent =
+          (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100;
         return usagePercent > 80;
       },
       actions: [
-        { type: 'notification', config: { title: 'Mémoire élevée', message: 'L\'utilisation mémoire est critique' } },
-        { type: 'log', config: { level: 'warn' } }
+        {
+          type: 'notification',
+          config: {
+            title: 'Mémoire élevée',
+            message: "L'utilisation mémoire est critique",
+          },
+        },
+        { type: 'log', config: { level: 'warn' } },
       ],
       enabled: true,
     });
@@ -88,35 +95,50 @@ class AlertManager {
       threshold: 3000,
       unit: 'ms',
       cooldown: 30000, // 30 secondes
-      condition: (_metrics) => {
-        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      condition: _metrics => {
+        const navigation = performance.getEntriesByType(
+          'navigation'
+        )[0] as PerformanceNavigationTiming;
         return navigation.loadEventEnd - navigation.loadEventStart > 3000;
       },
       actions: [
-        { type: 'notification', config: { title: 'Chargement lent', message: 'La page met trop de temps à charger' } }
+        {
+          type: 'notification',
+          config: {
+            title: 'Chargement lent',
+            message: 'La page met trop de temps à charger',
+          },
+        },
       ],
       enabled: true,
     });
 
     this.addRule({
       id: 'high-error-rate',
-      name: 'Taux d\'erreur élevé',
+      name: "Taux d'erreur élevé",
       description: 'Plus de 5 erreurs JavaScript en 1 minute',
       category: 'error',
       severity: 'critical',
       threshold: 5,
       unit: 'errors/min',
       cooldown: 120000, // 2 minutes
-      condition: (_metrics) => {
+      condition: _metrics => {
         const recentErrors = this.alerts.filter(
-          alert => alert.ruleId === 'javascript-error' && 
-          Date.now() - alert.timestamp < 60000
+          alert =>
+            alert.ruleId === 'javascript-error' &&
+            Date.now() - alert.timestamp < 60000
         );
         return recentErrors.length > 5;
       },
       actions: [
-        { type: 'notification', config: { title: 'Erreurs critiques', message: 'Trop d\'erreurs JavaScript détectées' } },
-        { type: 'api_call', config: { url: '/api/alerts', method: 'POST' } }
+        {
+          type: 'notification',
+          config: {
+            title: 'Erreurs critiques',
+            message: "Trop d'erreurs JavaScript détectées",
+          },
+        },
+        { type: 'api_call', config: { url: '/api/alerts', method: 'POST' } },
       ],
       enabled: true,
     });
@@ -130,31 +152,43 @@ class AlertManager {
       threshold: 6,
       unit: '/10',
       cooldown: 300000, // 5 minutes
-      condition: (_metrics) => {
+      condition: _metrics => {
         return false; // Placeholder - sera implémenté avec les vraies métriques
       },
       actions: [
-        { type: 'notification', config: { title: 'Satisfaction faible', message: 'Les utilisateurs ne sont pas satisfaits' } },
-        { type: 'slack', config: { channel: '#alerts' } }
+        {
+          type: 'notification',
+          config: {
+            title: 'Satisfaction faible',
+            message: 'Les utilisateurs ne sont pas satisfaits',
+          },
+        },
+        { type: 'slack', config: { channel: '#alerts' } },
       ],
       enabled: true,
     });
 
     this.addRule({
       id: 'feature-usage-drop',
-      name: 'Baisse d\'utilisation des features',
+      name: "Baisse d'utilisation des features",
       description: 'Utilisation des features en baisse de 50%',
       category: 'business',
       severity: 'medium',
       threshold: 50,
       unit: '%',
       cooldown: 600000, // 10 minutes
-      condition: (_metrics) => {
+      condition: _metrics => {
         // Comparer avec les métriques précédentes
         return false; // Placeholder - sera implémenté avec les vraies métriques
       },
       actions: [
-        { type: 'notification', config: { title: 'Usage en baisse', message: 'L\'utilisation des features a diminué' } }
+        {
+          type: 'notification',
+          config: {
+            title: 'Usage en baisse',
+            message: "L'utilisation des features a diminué",
+          },
+        },
       ],
       enabled: true,
     });
@@ -168,12 +202,18 @@ class AlertManager {
       threshold: 10000,
       unit: 'ms',
       cooldown: 30000,
-      condition: (_metrics) => {
+      condition: _metrics => {
         return false; // Placeholder - sera implémenté avec les vraies métriques
       },
       actions: [
-        { type: 'notification', config: { title: 'Timeout réseau', message: 'Les requêtes réseau sont lentes' } },
-        { type: 'log', config: { level: 'error' } }
+        {
+          type: 'notification',
+          config: {
+            title: 'Timeout réseau',
+            message: 'Les requêtes réseau sont lentes',
+          },
+        },
+        { type: 'log', config: { level: 'error' } },
       ],
       enabled: true,
     });
@@ -187,19 +227,25 @@ class AlertManager {
       threshold: 100,
       unit: '%',
       cooldown: 300000, // 5 minutes
-      condition: (_metrics) => {
+      condition: _metrics => {
         const memoryHistory = this.getMemoryHistory();
         if (memoryHistory.length < 2) return false;
-        
+
         const recent = memoryHistory[memoryHistory.length - 1];
         const older = memoryHistory[0];
         const increase = ((recent - older) / older) * 100;
-        
+
         return increase > 100;
       },
       actions: [
-        { type: 'notification', config: { title: 'Fuite mémoire', message: 'Fuite mémoire détectée' } },
-        { type: 'api_call', config: { url: '/api/alerts/memory-leak', method: 'POST' } }
+        {
+          type: 'notification',
+          config: { title: 'Fuite mémoire', message: 'Fuite mémoire détectée' },
+        },
+        {
+          type: 'api_call',
+          config: { url: '/api/alerts/memory-leak', method: 'POST' },
+        },
       ],
       enabled: true,
     });
@@ -256,18 +302,23 @@ class AlertManager {
     switch (rule.id) {
       case 'high-memory-usage':
         const memory = (performance as any).memory;
-        return memory ? (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100 : 0;
-      
+        return memory
+          ? (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100
+          : 0;
+
       case 'slow-page-load':
-        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+        const navigation = performance.getEntriesByType(
+          'navigation'
+        )[0] as PerformanceNavigationTiming;
         return navigation.loadEventEnd - navigation.loadEventStart;
-      
+
       case 'high-error-rate':
         return this.alerts.filter(
-          alert => alert.ruleId === 'javascript-error' && 
-          Date.now() - alert.timestamp < 60000
+          alert =>
+            alert.ruleId === 'javascript-error' &&
+            Date.now() - alert.timestamp < 60000
         ).length;
-      
+
       default:
         return 0;
     }
@@ -277,9 +328,13 @@ class AlertManager {
     for (const action of actions) {
       switch (action.type) {
         case 'notification':
-          this.showNotification(action.config.title, action.config.message, alert.severity);
+          this.showNotification(
+            action.config.title,
+            action.config.message,
+            alert.severity
+          );
           break;
-        
+
         case 'log':
           const level = action.config.level || 'warn';
           if (level === 'warn') {
@@ -290,15 +345,15 @@ class AlertManager {
             console.log(`[ALERT] ${alert.message}`, alert);
           }
           break;
-        
+
         case 'api_call':
           this.sendApiAlert(action.config, alert);
           break;
-        
+
         case 'email':
           this.sendEmailAlert(action.config, alert);
           break;
-        
+
         case 'slack':
           this.sendSlackAlert(action.config, alert);
           break;
@@ -306,7 +361,11 @@ class AlertManager {
     }
   }
 
-  private showNotification(title: string, message: string, severity: AlertRule['severity']): void {
+  private showNotification(
+    title: string,
+    message: string,
+    severity: AlertRule['severity']
+  ): void {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, {
         body: message,
@@ -350,7 +409,9 @@ class AlertManager {
   }
 
   private emitNotificationEvent(notification: AlertNotification): void {
-    window.dispatchEvent(new CustomEvent('numa-alert', { detail: notification }));
+    window.dispatchEvent(
+      new CustomEvent('numa-alert', { detail: notification })
+    );
   }
 
   private getMemoryHistory(): number[] {
@@ -404,7 +465,9 @@ export const alertManager = new AlertManager();
 // Hook React pour les alertes
 export function useAlerts() {
   const [alerts, setAlerts] = React.useState(alertManager.getAlerts());
-  const [notifications, setNotifications] = React.useState(alertManager.getNotifications());
+  const [notifications, setNotifications] = React.useState(
+    alertManager.getNotifications()
+  );
 
   React.useEffect(() => {
     const handleAlert = (event: CustomEvent) => {
@@ -412,7 +475,8 @@ export function useAlerts() {
     };
 
     window.addEventListener('numa-alert', handleAlert as EventListener);
-    return () => window.removeEventListener('numa-alert', handleAlert as EventListener);
+    return () =>
+      window.removeEventListener('numa-alert', handleAlert as EventListener);
   }, []);
 
   const acknowledgeAlert = (alertId: string) => {

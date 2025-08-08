@@ -3,28 +3,33 @@
 ## 🛡️ Mesures de Sécurité Implémentées
 
 ### 1. **Allowlist Tauri**
+
 - ✅ Permissions restreintes via `capabilities/main.json`
 - ✅ Seules les fonctionnalités nécessaires sont activées
 - ✅ API privées macOS verrouillées par défaut
 
 ### 2. **Content Security Policy (CSP)**
+
 - ✅ CSP stricte dans `index.html`
 - ✅ Restriction des sources de contenu
 - ✅ Protection contre XSS et injection
 
 ### 3. **Vérification des Dépendances**
+
 - ✅ `cargo audit` pour vulnérabilités Rust
 - ✅ `cargo deny` pour licences et doublons
 - ✅ `npm audit` pour vulnérabilités JavaScript
 - ✅ Workflow GitHub Actions automatisé
 
 ### 4. **Signature et Notarisation**
+
 - ✅ Configuration pour code signing macOS
 - ✅ Configuration pour notarisation Apple
 - ✅ Configuration pour signature Windows
 - ✅ Hardened Runtime activé
 
 ### 5. **Mise à Jour Sécurisée**
+
 - ✅ Configuration updater Tauri
 - ✅ Vérification cryptographique des mises à jour
 - ✅ Endpoints sécurisés
@@ -32,6 +37,7 @@
 ## 🔍 Vérifications de Sécurité
 
 ### Automatiques (CI/CD)
+
 ```bash
 # Rust
 cargo audit
@@ -45,6 +51,7 @@ cargo tauri build --release
 ```
 
 ### Manuel
+
 ```bash
 # Vérifier les permissions
 cargo tauri info
@@ -66,8 +73,9 @@ Si vous découvrez une vulnérabilité de sécurité :
 ## 📋 Checklist de Sécurité
 
 ### Avant chaque Release
+
 - [ ] `cargo audit` passe
-- [ ] `cargo deny check` passe  
+- [ ] `cargo deny check` passe
 - [ ] `npm audit` passe
 - [ ] CSP testée
 - [ ] Permissions minimales vérifiées
@@ -75,6 +83,7 @@ Si vous découvrez une vulnérabilité de sécurité :
 - [ ] Tests de sécurité passés
 
 ### Configuration Production
+
 - [ ] Hardened Runtime activé
 - [ ] Notarisation configurée
 - [ ] Updater sécurisé
@@ -84,12 +93,14 @@ Si vous découvrez une vulnérabilité de sécurité :
 ## 🔐 Bonnes Pratiques
 
 ### Développement
+
 - Toujours utiliser les permissions minimales
 - Valider les entrées utilisateur
 - Utiliser des secrets sécurisés
 - Tester les vulnérabilités connues
 
 ### Déploiement
+
 - Signer tous les binaires
 - Notariser sur macOS
 - Vérifier les checksums

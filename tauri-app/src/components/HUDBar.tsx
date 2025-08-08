@@ -109,10 +109,10 @@ const HUDBar: React.FC<HUDBarProps> = ({
           cursor: 'pointer',
           transition: 'all 0.2s ease',
         }}
-        onMouseEnter={(e) => {
+        onMouseEnter={e => {
           e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
         }}
-        onMouseLeave={(e) => {
+        onMouseLeave={e => {
           e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
         }}
         title="Mode furtif (test)"

@@ -13,21 +13,22 @@ export const COMMAND_NAMES = {
   CAPTURE_SCREEN: 'capture_screen',
   CAPTURE_AND_ANALYZE: 'capture_and_analyze',
   GET_IMAGE_AS_BASE64: 'get_image_as_base64',
-  
+
   // Fenêtres
   CLOSE_ALL_WINDOWS: 'close_all_windows',
   START_WINDOW_DRAGGING: 'start_window_dragging',
   RESIZE_WINDOW: 'resize_window',
   PANEL_SHOW: 'panel_show',
   PANEL_HIDE: 'panel_hide',
-  
+
   // Mode furtif
   TOGGLE_STEALTH: 'toggle_stealth_cmd',
   GET_STEALTH_STATUS: 'get_stealth_status',
   TEST_STEALTH_MANUAL: 'test_stealth_manual',
 } as const;
 
-export type CommandNameLiteral = typeof COMMAND_NAMES[keyof typeof COMMAND_NAMES];
+export type CommandNameLiteral =
+  (typeof COMMAND_NAMES)[keyof typeof COMMAND_NAMES];
 
 // ============================================================================
 // SCHÉMAS DE VALIDATION ZOD
@@ -38,12 +39,12 @@ export const CommandArgs = {
   [COMMAND_NAMES.GET_IMAGE_AS_BASE64]: z.object({
     imagePath: z.string().min(1, "Le chemin de l'image est requis"),
   }),
-  
+
   [COMMAND_NAMES.RESIZE_WINDOW]: z.object({
-    width: z.number().positive("La largeur doit être positive"),
-    height: z.number().positive("La hauteur doit être positive"),
+    width: z.number().positive('La largeur doit être positive'),
+    height: z.number().positive('La hauteur doit être positive'),
   }),
-  
+
   [COMMAND_NAMES.TOGGLE_STEALTH]: z.object({}),
   [COMMAND_NAMES.GET_STEALTH_STATUS]: z.object({}),
   [COMMAND_NAMES.TEST_STEALTH_MANUAL]: z.object({}),
@@ -57,9 +58,13 @@ export const CommandArgs = {
 
 // Résultats des commandes
 export const CommandResults = {
-  [COMMAND_NAMES.GET_IMAGE_AS_BASE64]: z.string().startsWith("data:", "Doit être une URL data"),
+  [COMMAND_NAMES.GET_IMAGE_AS_BASE64]: z
+    .string()
+    .startsWith('data:', 'Doit être une URL data'),
   [COMMAND_NAMES.GET_STEALTH_STATUS]: z.boolean(),
-  [COMMAND_NAMES.CAPTURE_SCREEN]: z.string().min(1, "Le chemin de capture est requis"),
+  [COMMAND_NAMES.CAPTURE_SCREEN]: z
+    .string()
+    .min(1, 'Le chemin de capture est requis'),
   [COMMAND_NAMES.CAPTURE_AND_ANALYZE]: z.string(),
   [COMMAND_NAMES.TOGGLE_STEALTH]: z.void(),
   [COMMAND_NAMES.TEST_STEALTH_MANUAL]: z.void(),
@@ -74,8 +79,12 @@ export const CommandResults = {
 // TYPES TYPESCRIPT
 // ============================================================================
 
-export type CommandArgsType<T extends CommandNameLiteral> = z.infer<typeof CommandArgs[T]>;
-export type CommandResultType<T extends CommandNameLiteral> = z.infer<typeof CommandResults[T]>;
+export type CommandArgsType<T extends CommandNameLiteral> = z.infer<
+  (typeof CommandArgs)[T]
+>;
+export type CommandResultType<T extends CommandNameLiteral> = z.infer<
+  (typeof CommandResults)[T]
+>;
 
 // Type pour toutes les commandes
 export type Commands = {

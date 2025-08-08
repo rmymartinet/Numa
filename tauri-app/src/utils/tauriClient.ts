@@ -1,9 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
-import { 
-  COMMAND_NAMES, 
-  CommandNameLiteral, 
-  validateCommandArgs, 
-  validateCommandResult
+import {
+  COMMAND_NAMES,
+  CommandNameLiteral,
+  validateCommandArgs,
+  validateCommandResult,
 } from './commands';
 
 // ============================================================================
@@ -25,13 +25,13 @@ export class TauriClient {
     try {
       // Valider les arguments si fournis
       const validatedArgs = args ? validateCommandArgs(command, args) : {};
-      
+
       // Appeler la commande Tauri
       const result = await invoke(command, validatedArgs as any);
-      
+
       // Valider le résultat
       const validatedResult = validateCommandResult(command, result);
-      
+
       return validatedResult;
     } catch (error) {
       console.error(`Erreur lors de l'invocation de ${command}:`, error);
@@ -64,39 +64,37 @@ export class TauriClient {
 // ============================================================================
 
 // Capture d'écran
-export const captureScreen = () => 
+export const captureScreen = () =>
   TauriClient.invoke(COMMAND_NAMES.CAPTURE_SCREEN);
 
-export const captureAndAnalyze = () => 
+export const captureAndAnalyze = () =>
   TauriClient.invoke(COMMAND_NAMES.CAPTURE_AND_ANALYZE);
 
-export const getImageAsBase64 = (imagePath: string) => 
+export const getImageAsBase64 = (imagePath: string) =>
   TauriClient.invokeWithArgs(COMMAND_NAMES.GET_IMAGE_AS_BASE64, { imagePath });
 
 // Fenêtres
-export const closeAllWindows = () => 
+export const closeAllWindows = () =>
   TauriClient.invokeVoid(COMMAND_NAMES.CLOSE_ALL_WINDOWS);
 
-export const startWindowDragging = () => 
+export const startWindowDragging = () =>
   TauriClient.invokeVoid(COMMAND_NAMES.START_WINDOW_DRAGGING);
 
-export const resizeWindow = (width: number, height: number) => 
+export const resizeWindow = (width: number, height: number) =>
   TauriClient.invokeWithArgs(COMMAND_NAMES.RESIZE_WINDOW, { width, height });
 
-export const panelShow = () => 
-  TauriClient.invokeVoid(COMMAND_NAMES.PANEL_SHOW);
+export const panelShow = () => TauriClient.invokeVoid(COMMAND_NAMES.PANEL_SHOW);
 
-export const panelHide = () => 
-  TauriClient.invokeVoid(COMMAND_NAMES.PANEL_HIDE);
+export const panelHide = () => TauriClient.invokeVoid(COMMAND_NAMES.PANEL_HIDE);
 
 // Mode furtif
-export const toggleStealth = () => 
+export const toggleStealth = () =>
   TauriClient.invokeVoid(COMMAND_NAMES.TOGGLE_STEALTH);
 
-export const getStealthStatus = () => 
+export const getStealthStatus = () =>
   TauriClient.invoke(COMMAND_NAMES.GET_STEALTH_STATUS);
 
-export const testStealthManual = () => 
+export const testStealthManual = () =>
   TauriClient.invokeVoid(COMMAND_NAMES.TEST_STEALTH_MANUAL);
 
 // ============================================================================

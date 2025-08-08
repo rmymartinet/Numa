@@ -24,7 +24,7 @@ const SettingsContent = lazy(() =>
 const LazyWrapper: React.FC<{
   children: React.ReactNode;
   fallback?: React.ReactNode;
-}> = ({ children, fallback = <LoadingSpinner size='sm' /> }) => (
+}> = ({ children, fallback = <LoadingSpinner size="sm" /> }) => (
   <Suspense fallback={fallback}>{children}</Suspense>
 );
 

@@ -5,20 +5,20 @@ import DropdownPanel from '../DropdownPanel';
 // Mock des composants lazy
 vi.mock('../LazyComponents', () => ({
   LazyActivityContent: () => (
-    <div data-testid='activity-content'>Activity Content</div>
+    <div data-testid="activity-content">Activity Content</div>
   ),
   LazyPersonalizeContent: () => (
-    <div data-testid='personalize-content'>Personalize Content</div>
+    <div data-testid="personalize-content">Personalize Content</div>
   ),
   LazySettingsContent: () => (
-    <div data-testid='settings-content'>Settings Content</div>
+    <div data-testid="settings-content">Settings Content</div>
   ),
 }));
 
 // Mock des composants enfants
 vi.mock('../DropdownPanel/PanelSidebar', () => ({
   default: ({ activeTab: _activeTab, onTabChange }: any) => (
-    <div data-testid='panel-sidebar'>
+    <div data-testid="panel-sidebar">
       <button onClick={() => onTabChange('activity')}>Activity</button>
       <button onClick={() => onTabChange('prompts')}>Prompts</button>
       <button onClick={() => onTabChange('settings')}>Settings</button>
@@ -28,7 +28,7 @@ vi.mock('../DropdownPanel/PanelSidebar', () => ({
 
 vi.mock('../DropdownPanel/PanelHeader', () => ({
   default: ({ onToggleTheme }: any) => (
-    <div data-testid='panel-header'>
+    <div data-testid="panel-header">
       <button onClick={onToggleTheme}>Toggle Theme</button>
     </div>
   ),
@@ -56,7 +56,7 @@ describe('DropdownPanel', () => {
   });
 
   it('shows activity content when activeTab is activity', () => {
-    render(<DropdownPanel {...defaultProps} activeTab='activity' />);
+    render(<DropdownPanel {...defaultProps} activeTab="activity" />);
 
     expect(screen.getByTestId('activity-content')).toBeInTheDocument();
     expect(screen.queryByTestId('personalize-content')).not.toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('DropdownPanel', () => {
   });
 
   it('shows personalize content when activeTab is prompts', () => {
-    render(<DropdownPanel {...defaultProps} activeTab='prompts' />);
+    render(<DropdownPanel {...defaultProps} activeTab="prompts" />);
 
     expect(screen.getByTestId('personalize-content')).toBeInTheDocument();
     expect(screen.queryByTestId('activity-content')).not.toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('DropdownPanel', () => {
   });
 
   it('shows settings content when activeTab is settings', () => {
-    render(<DropdownPanel {...defaultProps} activeTab='settings' />);
+    render(<DropdownPanel {...defaultProps} activeTab="settings" />);
 
     expect(screen.getByTestId('settings-content')).toBeInTheDocument();
     expect(screen.queryByTestId('activity-content')).not.toBeInTheDocument();

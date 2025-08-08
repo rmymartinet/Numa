@@ -23,8 +23,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
           : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
       }`}
     >
-      <span className='text-lg'>{icon}</span>
-      <span className='text-sm font-medium'>{label}</span>
+      <span className="text-lg">{icon}</span>
+      <span className="text-sm font-medium">{label}</span>
     </button>
   );
 };

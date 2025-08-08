@@ -6,7 +6,10 @@ interface MetricsDashboardProps {
   onClose?: () => void;
 }
 
-const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ isVisible = false, onClose }) => {
+const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
+  isVisible = false,
+  onClose,
+}) => {
   const { getMetrics, getUserMetrics, getBusinessMetrics } = useMetrics();
   const [metrics, setMetrics] = useState(getMetrics());
   const [userMetrics, setUserMetrics] = useState(getUserMetrics());
@@ -69,7 +72,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ isVisible = false, 
             <div className="space-y-1 text-sm">
               <div>Session: {userMetrics.sessionId.slice(-8)}</div>
               <div>Interactions: {userMetrics.interactions}</div>
-              <div>Temps: {Math.round((Date.now() - userMetrics.startTime) / 1000)}s</div>
+              <div>
+                Temps: {Math.round((Date.now() - userMetrics.startTime) / 1000)}
+                s
+              </div>
               <div>Erreurs: {userMetrics.errors}</div>
             </div>
           </div>
@@ -81,8 +87,13 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ isVisible = false, 
             </h3>
             <div className="space-y-1 text-sm">
               <div>Satisfaction: {businessMetrics.userSatisfaction}/10</div>
-              <div>Features: {Object.keys(businessMetrics.featureUsage).length}</div>
-              <div>Conversions: {Object.keys(businessMetrics.conversionEvents).length}</div>
+              <div>
+                Features: {Object.keys(businessMetrics.featureUsage).length}
+              </div>
+              <div>
+                Conversions:{' '}
+                {Object.keys(businessMetrics.conversionEvents).length}
+              </div>
               <div>Retention: {businessMetrics.retentionRate}%</div>
             </div>
           </div>
@@ -93,9 +104,25 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ isVisible = false, 
               🚨 Erreurs
             </h3>
             <div className="space-y-1 text-sm">
-              <div>JS Errors: {errorMetrics.filter(m => m.name === 'javascript_error').length}</div>
-              <div>Network: {errorMetrics.filter(m => m.name === 'network_request_error').length}</div>
-              <div>Promises: {errorMetrics.filter(m => m.name === 'unhandled_promise_rejection').length}</div>
+              <div>
+                JS Errors:{' '}
+                {errorMetrics.filter(m => m.name === 'javascript_error').length}
+              </div>
+              <div>
+                Network:{' '}
+                {
+                  errorMetrics.filter(m => m.name === 'network_request_error')
+                    .length
+                }
+              </div>
+              <div>
+                Promises:{' '}
+                {
+                  errorMetrics.filter(
+                    m => m.name === 'unhandled_promise_rejection'
+                  ).length
+                }
+              </div>
               <div>Total: {errorMetrics.length}</div>
             </div>
           </div>
@@ -105,35 +132,50 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ isVisible = false, 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Performance Timeline */}
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">📈 Timeline Performance</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              📈 Timeline Performance
+            </h3>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {performanceMetrics.slice(-10).reverse().map((metric, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span>{metric.name}</span>
-                  <span className="font-mono">{metric.value}{metric.unit}</span>
-                </div>
-              ))}
+              {performanceMetrics
+                .slice(-10)
+                .reverse()
+                .map((metric, index) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span>{metric.name}</span>
+                    <span className="font-mono">
+                      {metric.value}
+                      {metric.unit}
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
 
           {/* Utilisation des Features */}
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">🎯 Features Utilisées</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              🎯 Features Utilisées
+            </h3>
             <div className="space-y-2">
-              {Object.entries(businessMetrics.featureUsage).map(([feature, count]) => (
-                <div key={feature} className="flex justify-between items-center">
-                  <span className="text-sm">{feature}</span>
-                  <div className="flex items-center">
-                    <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2 mr-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full" 
-                        style={{ width: `${Math.min(count * 10, 100)}%` }}
-                      />
+              {Object.entries(businessMetrics.featureUsage).map(
+                ([feature, count]) => (
+                  <div
+                    key={feature}
+                    className="flex justify-between items-center"
+                  >
+                    <span className="text-sm">{feature}</span>
+                    <div className="flex items-center">
+                      <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2 mr-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full"
+                          style={{ width: `${Math.min(count * 10, 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-mono">{count}</span>
                     </div>
-                    <span className="text-sm font-mono">{count}</span>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </div>
         </div>
@@ -148,7 +190,9 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ isVisible = false, 
                 businessMetrics,
                 timestamp: new Date().toISOString(),
               };
-              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+              const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: 'application/json',
+              });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;

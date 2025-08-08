@@ -19,7 +19,7 @@ const CaptureButton: React.FC<CaptureButtonProps> = ({
     <button
       onClick={handleClick}
       disabled={isListening}
-      className='hud-no-drag'
+      className="hud-no-drag"
       style={{
         display: 'flex',
         alignItems: 'center',

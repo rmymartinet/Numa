@@ -6,34 +6,56 @@ interface AlertsPanelProps {
   onClose?: () => void;
 }
 
-const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose }) => {
-  const { alerts, notifications, acknowledgeAlert, resolveAlert, clearNotifications, rules } = useAlerts();
-  const [activeTab, setActiveTab] = useState<'alerts' | 'rules' | 'notifications'>('alerts');
+const AlertsPanel: React.FC<AlertsPanelProps> = ({
+  isVisible = false,
+  onClose,
+}) => {
+  const {
+    alerts,
+    notifications,
+    acknowledgeAlert,
+    resolveAlert,
+    clearNotifications,
+    rules,
+  } = useAlerts();
+  const [activeTab, setActiveTab] = useState<
+    'alerts' | 'rules' | 'notifications'
+  >('alerts');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
 
   if (!isVisible) return null;
 
-  const filteredAlerts = alerts.filter(alert => 
-    filterSeverity === 'all' || alert.severity === filterSeverity
+  const filteredAlerts = alerts.filter(
+    alert => filterSeverity === 'all' || alert.severity === filterSeverity
   );
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'bg-red-600 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-black';
-      case 'low': return 'bg-blue-500 text-white';
-      default: return 'bg-gray-500 text-white';
+      case 'critical':
+        return 'bg-red-600 text-white';
+      case 'high':
+        return 'bg-orange-500 text-white';
+      case 'medium':
+        return 'bg-yellow-500 text-black';
+      case 'low':
+        return 'bg-blue-500 text-white';
+      default:
+        return 'bg-gray-500 text-white';
     }
   };
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
-      case 'critical': return '🚨';
-      case 'high': return '⚠️';
-      case 'medium': return '⚡';
-      case 'low': return 'ℹ️';
-      default: return '📊';
+      case 'critical':
+        return '🚨';
+      case 'high':
+        return '⚠️';
+      case 'medium':
+        return '⚡';
+      case 'low':
+        return 'ℹ️';
+      default:
+        return '📊';
     }
   };
 
@@ -61,8 +83,8 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
           <button
             onClick={() => setActiveTab('alerts')}
             className={`px-4 py-2 rounded-lg ${
-              activeTab === 'alerts' 
-                ? 'bg-blue-500 text-white' 
+              activeTab === 'alerts'
+                ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
           >
@@ -71,8 +93,8 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
           <button
             onClick={() => setActiveTab('notifications')}
             className={`px-4 py-2 rounded-lg ${
-              activeTab === 'notifications' 
-                ? 'bg-blue-500 text-white' 
+              activeTab === 'notifications'
+                ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
           >
@@ -81,8 +103,8 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
           <button
             onClick={() => setActiveTab('rules')}
             className={`px-4 py-2 rounded-lg ${
-              activeTab === 'rules' 
-                ? 'bg-blue-500 text-white' 
+              activeTab === 'rules'
+                ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
           >
@@ -98,7 +120,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
               <div className="flex space-x-2">
                 <select
                   value={filterSeverity}
-                  onChange={(e) => setFilterSeverity(e.target.value)}
+                  onChange={e => setFilterSeverity(e.target.value)}
                   className="px-3 py-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                 >
                   <option value="all">Toutes les sévérités</option>
@@ -120,7 +142,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
                   Aucune alerte à afficher
                 </div>
               ) : (
-                filteredAlerts.map((alert) => (
+                filteredAlerts.map(alert => (
                   <div
                     key={alert.id}
                     className={`border rounded-lg p-4 ${
@@ -129,7 +151,9 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{getSeverityIcon(alert.severity)}</span>
+                        <span className="text-2xl">
+                          {getSeverityIcon(alert.severity)}
+                        </span>
                         <div>
                           <h3 className="font-semibold text-gray-900 dark:text-white">
                             {alert.message}
@@ -140,15 +164,19 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(alert.severity)}`}>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(alert.severity)}`}
+                        >
                           {alert.severity.toUpperCase()}
                         </span>
                         <span className="text-sm font-mono">
-                          {alert.value}{alert.unit} / {alert.threshold}{alert.unit}
+                          {alert.value}
+                          {alert.unit} / {alert.threshold}
+                          {alert.unit}
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="mt-3 flex space-x-2">
                       {!alert.acknowledged && (
                         <button
@@ -192,7 +220,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
                   Aucune notification
                 </div>
               ) : (
-                notifications.map((notification) => (
+                notifications.map(notification => (
                   <div
                     key={notification.id}
                     className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-700"
@@ -209,7 +237,9 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
                           {formatTimestamp(notification.timestamp)}
                         </p>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(notification.severity)}`}>
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(notification.severity)}`}
+                      >
                         {notification.severity.toUpperCase()}
                       </span>
                     </div>
@@ -222,10 +252,12 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
 
         {activeTab === 'rules' && (
           <div>
-            <h3 className="text-lg font-semibold mb-4">Règles d'Alerte Configurées</h3>
-            
+            <h3 className="text-lg font-semibold mb-4">
+              Règles d'Alerte Configurées
+            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {rules.map((rule) => (
+              {rules.map(rule => (
                 <div
                   key={rule.id}
                   className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700"
@@ -235,19 +267,25 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
                       {rule.name}
                     </h4>
                     <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(rule.severity)}`}>
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(rule.severity)}`}
+                      >
                         {rule.severity.toUpperCase()}
                       </span>
-                      <span className={`w-3 h-3 rounded-full ${rule.enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <span
+                        className={`w-3 h-3 rounded-full ${rule.enabled ? 'bg-green-500' : 'bg-gray-400'}`}
+                      />
                     </div>
                   </div>
-                  
+
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                     {rule.description}
                   </p>
-                  
+
                   <div className="text-xs text-gray-500 space-y-1">
-                    <div>Seuil: {rule.threshold} {rule.unit}</div>
+                    <div>
+                      Seuil: {rule.threshold} {rule.unit}
+                    </div>
                     <div>Cooldown: {rule.cooldown / 1000}s</div>
                     <div>Catégorie: {rule.category}</div>
                     <div>Actions: {rule.actions.length}</div>
@@ -269,7 +307,9 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ isVisible = false, onClose })
                 rules,
                 timestamp: new Date().toISOString(),
               };
-              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+              const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: 'application/json',
+              });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
