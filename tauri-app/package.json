@@ -22,7 +22,21 @@
     "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint src/ --ext .ts,.tsx --fix",
     "type-check": "tsc --noEmit",
-    "optimize": "./optimize-assets.sh"
+    "optimize": "./optimize-assets.sh",
+    "tauri:dev": "tauri dev",
+    "tauri:dev:debug": "tauri dev --features debug",
+    "tauri:dev:stealth": "tauri dev --features stealth_macos",
+    "tauri:build": "tauri build",
+    "tauri:build:dev": "tauri build --features dev",
+    "tauri:build:debug": "tauri build --features debug",
+    "tauri:build:stealth": "tauri build --features stealth_macos",
+    "cargo:dev": "cd src-tauri && cargo build --features dev",
+    "cargo:debug": "cd src-tauri && cargo build --features debug",
+    "cargo:stealth": "cd src-tauri && cargo build --features stealth_macos",
+    "cargo:prod": "cd src-tauri && cargo build --release",
+    "cargo:secure": "cd src-tauri && cargo build --release --no-default-features --features secure",
+    "cargo:test:dev": "cd src-tauri && cargo test --features dev",
+    "cargo:test:debug": "cd src-tauri && cargo test --features debug"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

@@ -27,7 +27,16 @@ pub fn toggle_stealth(app: &AppHandle) -> AppResult<()> {
         *guard
     };
 
-    info!("🕵️ Toggle stealth: active = {}", active);
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        info!("🕵️ Toggle stealth: active = {}", active);
+    }
+
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        warn!("🕵️ Stealth mode requested but stealth_macos feature not enabled");
+        return Ok(());
+    }
 
     // Toutes les opérations AppKit *doivent* être sur le thread UI.
     app.run_on_main_thread({
@@ -55,11 +64,18 @@ pub fn toggle_stealth(app: &AppHandle) -> AppResult<()> {
     Ok(())
 }
 
-
-
 // Fonction optionnelle pour rendre les fenêtres traversantes
 pub fn make_windows_click_through(app: &AppHandle, click_through: bool) -> AppResult<()> {
-    info!("Setting windows click through: {}", click_through);
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        info!("Setting windows click through: {}", click_through);
+    }
+
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        warn!("Click through requested but stealth_macos feature not enabled");
+        return Ok(());
+    }
     
     app.run_on_main_thread({
         let app = app.clone();
@@ -86,7 +102,16 @@ pub fn force_stealth_on(app: &AppHandle) -> AppResult<()> {
         *guard = true;
     }
     
-    info!("🕵️ Force stealth mode ON");
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        info!("🕵️ Force stealth mode ON");
+    }
+
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        warn!("🕵️ Force stealth requested but stealth_macos feature not enabled");
+        return Ok(());
+    }
     
     // Appliquer le mode furtif à toutes les fenêtres existantes
     app.run_on_main_thread({

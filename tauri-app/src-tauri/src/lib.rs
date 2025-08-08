@@ -117,7 +117,7 @@ fn apply_current_stealth(app: &AppHandle, win: &tauri::WebviewWindow) -> tauri::
 /// Configure la fenêtre `panel` pour qu'elle soit invisible aux captures d'écran
 /// Utilise NSWindow.sharingType = .none pour exclure du screen-capture
 fn configure_panel_stealth(panel: &tauri::WebviewWindow, stealth: bool) -> tauri::Result<()> {
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     unsafe {
         use objc::{msg_send, sel, sel_impl};
         use objc::runtime::Object;
@@ -139,6 +139,11 @@ fn configure_panel_stealth(panel: &tauri::WebviewWindow, stealth: bool) -> tauri
             // — réactiver les clics explicitement —
             let _: () = msg_send![win, setIgnoresMouseEvents: false];
         }
+    }
+
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        tracing::warn!("Stealth mode not available - stealth_macos feature not enabled");
     }
 
     // Sur Windows/Linux il n'existe pas d'équivalent public pour masquer une fenêtre
@@ -173,7 +178,7 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     .build()?;
     
     // 🔑 Supprimer complètement les contours de la fenêtre sur macOS
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     unsafe {
         use objc::{class, msg_send, sel, sel_impl};
         use objc::runtime::Object;
@@ -205,7 +210,7 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
     let panel = app.get_webview_window("panel").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Panel window not found")))?;
 
     // 1) Rendre visible et interactif
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     unsafe {
         use objc::{msg_send, sel, sel_impl};
         let win = panel.ns_window()? as *mut objc::runtime::Object;
@@ -226,7 +231,7 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
 fn panel_hide(app: AppHandle) -> tauri::Result<()> {
     if let Some(panel) = app.get_webview_window("panel") {
         // 1) Rendre invisible et non-interactif
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
         unsafe {
             use objc::{msg_send, sel, sel_impl};
             let win = panel.ns_window()? as *mut objc::runtime::Object;
@@ -297,15 +302,36 @@ fn secure_delete(key: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Initialiser le logging
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::new(
-            std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into())
-        ))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    // Initialiser le logging selon les features
+    #[cfg(feature = "debug")]
+    {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::EnvFilter::new(
+                std::env::var("RUST_LOG").unwrap_or_else(|_| "debug".into())
+            ))
+            .with(tracing_subscriber::fmt::layer().with_ansi(true))
+            .init();
+    }
+
+    #[cfg(not(feature = "debug"))]
+    {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::EnvFilter::new(
+                std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into())
+            ))
+            .with(tracing_subscriber::fmt::layer())
+            .init();
+    }
 
     info!("Starting Numa application...");
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        info!("🕵️ Stealth mode enabled - macOS private APIs active");
+    }
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        warn!("🕵️ Stealth mode disabled - macOS private APIs not available");
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -321,14 +347,17 @@ pub fn run() {
             panel_hide,
             toggle_stealth_cmd,
             get_stealth_status,
-            test_stealth_manual
+            test_stealth_manual,
+            secure_store,
+            secure_load,
+            secure_delete
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 window.app_handle().exit(0);
             }
         })
-                            .setup(|app| {
+        .setup(|app| {
             info!("Setting up application...");
             
             // Forcer le HUD au premier plan
@@ -337,13 +366,23 @@ pub fn run() {
                 info!("HUD window focused");
             }
             
-            // Activer le mode furtif automatiquement au démarrage
-            // On attend un peu que les fenêtres soient complètement initialisées
+            // Activer le mode furtif automatiquement au démarrage seulement si la feature est activée
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(1000));
-                if let Err(e) = stealth::force_stealth_on(&app_handle) {
-                    error!("Failed to force stealth on: {}", e);
+                
+                #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+                {
+                    if let Err(e) = stealth::force_stealth_on(&app_handle) {
+                        error!("Failed to force stealth on: {}", e);
+                    } else {
+                        info!("🕵️ Stealth mode activated on startup");
+                    }
+                }
+                
+                #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+                {
+                    info!("🕵️ Skipping stealth activation - feature not enabled");
                 }
                 
                 // Émettre un événement pour signaler que l'application est prête
@@ -355,8 +394,8 @@ pub fn run() {
             });
             
             info!("Application setup complete");
-                        Ok(())
-                    })
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

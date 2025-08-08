@@ -36,7 +36,10 @@ pub fn set_window_borderless(_window: *mut ()) {
 
 /// Obtient la fenêtre NS d'une WebviewWindow Tauri (erreur sur autres plateformes)
 pub fn get_ns_window(_webview: &WebviewWindow) -> Result<*mut (), tauri::Error> {
-    Err(tauri::Error::from("NSWindow not available on this platform"))
+    Err(tauri::Error::from(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "NSWindow not available on this platform"
+    )))
 }
 
 /// Applique le mode furtif à une fenêtre (no-op sur autres plateformes)

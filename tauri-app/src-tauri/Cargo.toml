@@ -22,7 +22,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2.7", features = ["macos-private-api", "test"] }
+# Tauri de base - features minimales par défaut
+tauri = { version = "2.7", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 # tauri-plugin-global-shortcut = "2"  # Temporairement désactivé - API instable
 screenshots = "0.8"
@@ -38,16 +39,35 @@ thiserror = "1.0"
 anyhow = "1.0"
 keyring = "2.0"
 
+# Dépendances conditionnelles selon les features
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.48", features = ["Win32_UI_WindowsAndMessaging"] }
 
+# API privées macOS - seulement si feature stealth_macos activée
 [target.'cfg(target_os = "macos")'.dependencies]
-objc = "0.2"
-core-graphics = "0.23"
-cocoa = "0.25"
+objc = { version = "0.2", optional = true }
+core-graphics = { version = "0.23", optional = true }
+cocoa = { version = "0.25", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }
 tempfile = "3.8"
+
+# Features pour isoler les environnements et API privées
+[features]
+# Production par défaut : inclut le mode furtif pour macOS
+default = ["stealth_macos"]
+
+# Développement : active les chemins de test et logs verbeux
+dev = ["tauri/test", "stealth_macos"]
+
+# macOS : active l'usage d'API privées macOS (uniquement si build macOS)
+stealth_macos = ["tauri/macos-private-api", "objc", "core-graphics", "cocoa"]
+
+# Debug : logs très verbeux et outils de debug
+debug = ["dev", "tracing-subscriber/ansi"]
+
+# Production sécurisée : sans API privées (pour distribution)
+secure = []
 
 
