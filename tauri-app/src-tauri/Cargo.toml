@@ -1,9 +1,13 @@
 [package]
 name = "tauri-app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Numa - AI Assistant with stealth mode"
+authors = ["martinet"]
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/rmymartinet/Numa"
+keywords = ["tauri", "ai", "assistant", "desktop"]
+categories = ["desktop-application"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

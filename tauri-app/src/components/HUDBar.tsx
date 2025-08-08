@@ -85,40 +85,40 @@ const HUDBar: React.FC<HUDBarProps> = ({
         onToggle={onTogglePanel}
       />
 
-      {/* Indicateur du mode furtif */}
-      <div
+      {/* Bouton de test du mode furtif */}
+      <button
+        onClick={async () => {
+          try {
+            await invoke('toggle_stealth_cmd');
+            console.log('Mode furtif activé/désactivé (bouton)');
+          } catch (error) {
+            console.error('Erreur lors du toggle du mode furtif:', error);
+          }
+        }}
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           width: '32px',
           height: '32px',
-          backgroundColor: 'rgba(0, 255, 0, 0.2)', // Vert pour indiquer que c'est actif
-          border: '1px solid rgba(0, 255, 0, 0.4)',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
           borderRadius: '50%',
           color: 'white',
           fontSize: '14px',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
         }}
-        onClick={async () => {
-          try {
-            await invoke('toggle_stealth_cmd');
-            console.log('Mode furtif basculé (indicateur)');
-          } catch (error) {
-            console.error('Erreur lors du toggle du mode furtif:', error);
-          }
-        }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(0, 255, 0, 0.3)';
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
         }}
-        title="Mode furtif actif - Cliquer pour désactiver"
+        title="Mode furtif (test)"
       >
         🕵️
-      </div>
+      </button>
 
       <CloseButton onClose={onClose} />
     </div>

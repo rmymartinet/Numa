@@ -1,178 +1,51 @@
-import { logger } from './logger';
+// src/utils/api.ts
+type TauriInvoke = <T = any>(cmd: string, args?: Record<string, any>) => Promise<T>;
 
-// Configuration pour les retries
-export interface RetryConfig {
-  maxRetries: number;
-  baseDelay: number;
-  maxDelay: number;
-  backoffMultiplier: number;
-}
-
-const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
-  baseDelay: 1000,
-  maxDelay: 10000,
-  backoffMultiplier: 2,
+const getInvoke = (): TauriInvoke => {
+  const inv = (globalThis as any).__TAURI__?.invoke as TauriInvoke | undefined;
+  if (inv) return inv;
+  
+  // Fallback for browser/Playwright/Vitest (no Tauri)
+  return async (cmd: string, args?: Record<string, any>) => {
+    console.warn(`[api fallback] invoke(${cmd})`, args);
+    if (cmd === "get_stealth_status") return false as any;
+    if (cmd === "toggle_stealth_cmd") return undefined as any;
+    if (cmd === "capture_screen") return "/tmp/screenshot.png" as any;
+    if (cmd === "get_image_as_base64") {
+      // 1x1 transparent PNG
+      return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMAAQAABQABlR9uJwAAAABJRU5ErkJggg==";
+    }
+    return undefined as any;
+  };
 };
 
-// Types d'erreurs réseau
-export enum NetworkErrorType {
-  TIMEOUT = 'timeout',
-  RATE_LIMIT = 'rate_limit',
-  SERVER_ERROR = 'server_error',
-  NETWORK_ERROR = 'network_error',
-  UNKNOWN = 'unknown',
+const invoke = getInvoke();
+
+export async function getStealthStatus(): Promise<boolean> {
+  return invoke<boolean>("get_stealth_status");
 }
 
-export interface NetworkError {
-  type: NetworkErrorType;
-  message: string;
-  status?: number;
-  retryAfter?: number;
+export async function toggleStealth(): Promise<void> {
+  await invoke<void>("toggle_stealth_cmd");
 }
 
-// Fonction utilitaire pour calculer le délai de retry
-function calculateRetryDelay(attempt: number, config: RetryConfig): number {
-  const delay =
-    config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1);
-  return Math.min(delay, config.maxDelay);
+export async function captureScreen(): Promise<string> {
+  // returns path on disk (Rust side)
+  return invoke<string>("capture_screen");
 }
 
-// Fonction pour analyser les erreurs réseau
-function analyzeNetworkError(error: any): NetworkError {
-  if (error.name === 'AbortError' || error.message.includes('timeout')) {
-    return {
-      type: NetworkErrorType.TIMEOUT,
-      message: "Délai d'attente dépassé",
-    };
-  }
-
-  if (error.status === 429) {
-    return {
-      type: NetworkErrorType.RATE_LIMIT,
-      message: 'Limite de taux dépassée',
-      status: 429,
-      retryAfter: parseInt(error.headers?.get('retry-after') || '60'),
-    };
-  }
-
-  if (error.status >= 500) {
-    return {
-      type: NetworkErrorType.SERVER_ERROR,
-      message: 'Erreur serveur',
-      status: error.status,
-    };
-  }
-
-  if (error.status >= 400) {
-    return {
-      type: NetworkErrorType.NETWORK_ERROR,
-      message: 'Erreur de requête',
-      status: error.status,
-    };
-  }
-
-  return {
-    type: NetworkErrorType.UNKNOWN,
-    message: error.message || 'Erreur inconnue',
-  };
+export async function getImageAsBase64(imagePath: string): Promise<string> {
+  return invoke<string>("get_image_as_base64", { imagePath });
 }
 
-// Fonction pour attendre un délai
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+export async function panelShow(): Promise<void> {
+  await invoke<void>("panel_show");
 }
 
-// Fonction principale avec retry
-export async function fetchWithRetry<T>(
-  url: string,
-  options: RequestInit,
-  config: Partial<RetryConfig> = {}
-): Promise<T> {
-  const retryConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
-  let lastError: NetworkError;
-
-  for (let attempt = 1; attempt <= retryConfig.maxRetries; attempt++) {
-    try {
-      logger.info(`Tentative ${attempt}/${retryConfig.maxRetries}`, { url });
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const error = new Error(
-          `HTTP ${response.status}: ${response.statusText}`
-        );
-        (error as any).status = response.status;
-        (error as any).headers = response.headers;
-        throw error;
-      }
-
-      const data = await response.json();
-      logger.info(`Requête réussie après ${attempt} tentative(s)`, { url });
-      return data;
-    } catch (error: any) {
-      lastError = analyzeNetworkError(error);
-
-      logger.warn(`Tentative ${attempt} échouée`, {
-        url,
-        error: lastError,
-        attempt,
-      });
-
-      // Ne pas retry pour certaines erreurs
-      if (
-        lastError.type === NetworkErrorType.NETWORK_ERROR &&
-        lastError.status === 400
-      ) {
-        throw lastError;
-      }
-
-      // Dernière tentative
-      if (attempt === retryConfig.maxRetries) {
-        logger.error('Toutes les tentatives ont échoué', {
-          url,
-          totalAttempts: retryConfig.maxRetries,
-          lastError,
-        });
-        throw lastError;
-      }
-
-      // Calculer le délai de retry
-      let delay = calculateRetryDelay(attempt, retryConfig);
-
-      // Utiliser retry-after si disponible
-      if (
-        lastError.type === NetworkErrorType.RATE_LIMIT &&
-        lastError.retryAfter
-      ) {
-        delay = lastError.retryAfter * 1000;
-      }
-
-      logger.info(`Attente avant retry`, { delay, attempt });
-      await sleep(delay);
-    }
-  }
-
-  throw lastError!;
+export async function panelHide(): Promise<void> {
+  await invoke<void>("panel_hide");
 }
 
-// Hook React pour les requêtes avec retry
-export function useApiWithRetry() {
-  const makeRequest = async <T>(
-    url: string,
-    options: RequestInit,
-    config?: Partial<RetryConfig>
-  ): Promise<T> => {
-    return fetchWithRetry<T>(url, options, config);
-  };
-
-  return { makeRequest };
+export async function resizeWindow(width: number, height: number): Promise<void> {
+  await invoke<void>("resize_window", { width, height });
 }

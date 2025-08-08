@@ -1,0 +1,36 @@
+{
+  "codeSigning": {
+    "macOS": {
+      "identity": null,
+      "hardenedRuntime": true,
+      "entitlements": null,
+      "entitlementsInherit": null,
+      "flags": null,
+      "timestamp": null,
+      "provider": null,
+      "certificateThumbprint": null,
+      "teamId": null
+    },
+    "windows": {
+      "enabled": false,
+      "certificatePath": null,
+      "certificatePassword": null,
+      "timestampUrl": null
+    }
+  },
+  "notarization": {
+    "enabled": false,
+    "appleId": null,
+    "appleIdPassword": null,
+    "teamId": null,
+    "ascProvider": null
+  },
+  "updater": {
+    "active": false,
+    "endpoints": [
+      "https://releases.myapp.com/{{target}}/{{current_version}}"
+    ],
+    "dialog": true,
+    "pubkey": "YOUR_PUBLIC_KEY_HERE"
+  }
+}

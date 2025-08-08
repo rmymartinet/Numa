@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/capabilities/main.json",
+  "identifier": "main-capability",
+  "description": "Capability for the main window",
+  "windows": ["hud", "panel"],
+  "permissions": [
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
+    "core:webview:default",
+    "opener:default"
+  ]
+}

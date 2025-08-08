@@ -1,0 +1,45 @@
+# Configuration pour cargo-deny
+# Vérification de sécurité des dépendances
+
+[advisories]
+# Vérifier les vulnérabilités connues
+vulnerability = "deny"
+# Vérifier les versions non maintenues
+unmaintained = "warn"
+# Vérifier les versions non supportées
+unsound = "deny"
+# Vérifier les versions yanked
+yanked = "deny"
+
+[licenses]
+# Licences autorisées
+default = "deny"
+copyleft = "deny"
+# Licences permissives autorisées
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "CC0-1.0",
+    "Unlicense",
+    "Zlib",
+    "WTFPL",
+]
+
+[licenses.exceptions]
+# Exceptions pour certaines dépendances
+tauri = { allow = ["MIT", "Apache-2.0"] }
+serde = { allow = ["MIT", "Apache-2.0"] }
+tokio = { allow = ["MIT"] }
+
+[bans]
+# Vérifier les dépendances multiples
+multiple-versions = "deny"
+# Vérifier les dépendances dupliquées
+duplicates = "deny"
+
+[source]
+# Vérifier les sources de registre
+registry = "https://github.com/rust-lang/crates.io-index"
