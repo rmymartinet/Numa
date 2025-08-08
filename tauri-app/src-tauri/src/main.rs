@@ -2,5 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // Load environment variables from .env file
+    dotenvy::dotenv().ok();
+
     tauri_app_lib::run()
 }

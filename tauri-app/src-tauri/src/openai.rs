@@ -142,8 +142,8 @@ async fn get_api_key() -> Result<String, String> {
             }
         }
         Err(_) => {
-            // Fallback to hardcoded key for testing
-            Ok("REDACTED".to_string())
+            // No fallback key for security
+            Err("OpenAI API key not found. Please set it via secure_store command or OPENAI_API_KEY env var".to_string())
         }
     }
 }
