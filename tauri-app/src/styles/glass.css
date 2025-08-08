@@ -7,6 +7,7 @@
   --glass-sat: 1.35;
   --text-strong: rgba(255, 255, 255, 0.92);
   --text-dim: rgba(255, 255, 255, 0.65);
+  --liquid-intensity: 150;
 }
 @media (prefers-color-scheme: light) {
   :root {
