@@ -5,12 +5,10 @@
   "windows": ["hud", "panel"],
   "permissions": [
     "core:path:default",
-    "core:event:default",
+    "core:event:default", 
     "core:window:default",
     "core:app:default",
     "core:resources:default",
-    "core:menu:default",
-    "core:tray:default",
     "core:webview:default",
     "opener:default"
   ]

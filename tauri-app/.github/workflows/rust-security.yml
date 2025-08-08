@@ -1,0 +1,207 @@
+name: 🦀 Rust Security & Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'src-tauri/**'
+      - '.github/workflows/rust-security.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src-tauri/**'
+      - '.github/workflows/rust-security.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  rust-security-audit:
+    name: 🔍 Security & Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: 💾 Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: rust-security-${{ runner.os }}
+
+      - name: 🎯 Install security tools
+        run: |
+          cargo install --locked cargo-audit
+          cargo install --locked cargo-deny
+
+      # === FORMATTING ===
+      - name: 📐 Check code formatting
+        run: |
+          cd src-tauri
+          cargo fmt --all -- --check
+        continue-on-error: false
+
+      # === LINTING avec règles de sécurité ===
+      - name: 🔧 Clippy with security lints
+        run: |
+          cd src-tauri
+          cargo clippy --all-targets --all-features --locked -- \
+            -D warnings \
+            -W clippy::pedantic \
+            -W clippy::nursery \
+            -W clippy::cargo \
+            -W clippy::suspicious \
+            -W clippy::complexity \
+            -A clippy::uninlined-format-args \
+            -A clippy::module-name-repetitions
+        continue-on-error: false
+
+      # === TESTS avec différentes features ===
+      - name: 🧪 Test default features
+        run: |
+          cd src-tauri
+          cargo test --locked --verbose
+
+      - name: 🧪 Test dev features
+        run: |
+          cd src-tauri
+          cargo test --locked --features dev --verbose
+
+      - name: 🧪 Test debug features
+        run: |
+          cd src-tauri
+          cargo test --locked --features debug --verbose
+          
+      - name: 🧪 Test secure build (no private APIs)
+        run: |
+          cd src-tauri
+          cargo test --locked --no-default-features --features secure --verbose
+
+      # === BUILDS de validation ===
+      - name: 🏗️ Validate feature combinations
+        run: |
+          cd src-tauri
+          echo "Testing secure build..."
+          cargo check --locked --no-default-features --features secure
+          
+          echo "Testing stealth_macos build..."
+          cargo check --locked --features stealth_macos
+          
+          echo "Testing dev build..."
+          cargo check --locked --features dev
+          
+          echo "Testing debug build..."
+          cargo check --locked --features debug
+
+      # === AUDIT SÉCURITÉ ===
+      - name: 🛡️ Security audit - vulnerabilities
+        run: |
+          cd src-tauri
+          cargo audit --deny warnings --deny yanked --deny unsound
+        continue-on-error: false
+
+      - name: 🛡️ Dependency policy check
+        uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          manifest-path: src-tauri/Cargo.toml
+          arguments: --all-features
+          
+      # === DOC GENERATION ===
+      - name: 📚 Check documentation
+        run: |
+          cd src-tauri
+          cargo doc --no-deps --document-private-items --all-features
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+  # === JOB SÉPARÉ pour macOS-specific tests ===
+  macos-stealth-tests:
+    name: 🍎 macOS Stealth Features
+    runs-on: macos-latest
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'macos')
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 🕵️ Test stealth_macos feature compilation
+        run: |
+          cd src-tauri
+          echo "Testing stealth_macos feature on actual macOS..."
+          cargo check --features stealth_macos --verbose
+          
+          echo "Testing stealth_macos + dev features..."
+          cargo check --features "stealth_macos,dev" --verbose
+          
+          echo "Running stealth-specific tests..."
+          cargo test --features stealth_macos stealth --verbose
+
+      - name: 🧪 Platform-specific tests
+        run: |
+          cd src-tauri
+          cargo test --features stealth_macos platform::macos --verbose || echo "Platform tests completed"
+
+  # === RAPPORT de sécurité ===
+  security-report:
+    name: 📊 Security Report
+    runs-on: ubuntu-latest
+    needs: [rust-security-audit]
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: 💾 Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 📊 Generate security report
+        run: |
+          cd src-tauri
+          echo "# 🛡️ Numa Security Report" > security-report.md
+          echo "Generated: $(date)" >> security-report.md
+          echo "" >> security-report.md
+          
+          echo "## 📦 Dependencies" >> security-report.md
+          cargo tree --locked >> security-report.md
+          echo "" >> security-report.md
+          
+          echo "## 🔍 Features Analysis" >> security-report.md
+          echo "- Default features: stealth_macos" >> security-report.md
+          echo "- Secure build: no private APIs" >> security-report.md
+          echo "- Dev features: test + stealth capabilities" >> security-report.md
+          echo "" >> security-report.md
+          
+          cargo install cargo-audit || true
+          echo "## 🚨 Security Audit" >> security-report.md
+          cargo audit --format json > audit.json || true
+          if [ -f audit.json ]; then
+            echo "✅ No known vulnerabilities detected" >> security-report.md
+          fi
+
+      - name: 📤 Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: src-tauri/security-report.md

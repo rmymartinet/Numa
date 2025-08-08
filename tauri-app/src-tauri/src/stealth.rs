@@ -4,8 +4,9 @@
 use tauri::{AppHandle, Manager, Emitter};
 use std::sync::{Arc, Mutex};
 use tracing::{info, warn, error};
-use crate::platform::{apply_stealth_to_window, hide_window_visually, show_window_visually};
-use crate::errors::{StealthError, AppResult};
+use serde_json;
+use crate::platform::apply_stealth_to_window;
+use crate::errors::AppResult;
 
 /// Partagé dans l'app pour savoir si le mode furtif est actif.
 #[derive(Default, Clone)]
@@ -39,7 +40,7 @@ pub fn toggle_stealth(app: &AppHandle) -> AppResult<()> {
     }
 
     // Toutes les opérations AppKit *doivent* être sur le thread UI.
-    app.run_on_main_thread({
+    let _ = app.run_on_main_thread({
         let app = app.clone();
         move || {
             // Appliquer à toutes les fenêtres existantes
@@ -56,10 +57,19 @@ pub fn toggle_stealth(app: &AppHandle) -> AppResult<()> {
         }
     });
 
+    // Émettre les événements legacy + nouveaux événements enrichis
     let _ = app.emit(
         if active { "stealth-activated" } else { "stealth-deactivated" },
         (),
     );
+    
+    // Nouvel événement unifié avec métadonnées
+    let _ = app.emit("stealth:changed", serde_json::json!({
+        "active": active,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "observability_disabled": active,
+        "source": "api_toggle"
+    }));
 
     Ok(())
 }
@@ -77,7 +87,7 @@ pub fn make_windows_click_through(app: &AppHandle, click_through: bool) -> AppRe
         return Ok(());
     }
     
-    app.run_on_main_thread({
+    let _ = app.run_on_main_thread({
         let app = app.clone();
         move || {
             for label in ["hud", "panel"] {
@@ -114,7 +124,7 @@ pub fn force_stealth_on(app: &AppHandle) -> AppResult<()> {
     }
     
     // Appliquer le mode furtif à toutes les fenêtres existantes
-    app.run_on_main_thread({
+    let _ = app.run_on_main_thread({
         let app = app.clone();
         move || {
             // Appliquer à toutes les fenêtres existantes
@@ -131,8 +141,14 @@ pub fn force_stealth_on(app: &AppHandle) -> AppResult<()> {
         }
     });
     
-    // Émettre l'événement pour informer le frontend
+    // Émettre les événements pour informer le frontend
     let _ = app.emit("stealth-activated", ());
+    let _ = app.emit("stealth:changed", serde_json::json!({
+        "active": true,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "observability_disabled": true,
+        "source": "force_startup"
+    }));
     
     Ok(())
 }

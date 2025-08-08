@@ -3,12 +3,15 @@
 mod stealth;
 mod platform;
 mod errors;
+mod logging;
+mod validation;
+mod csp_manager;
 #[cfg(test)]
 mod tests;
 
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
-use tracing::{info, warn, error};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing::{info, warn, error, debug};
+// Note: Ces imports ne sont plus nécessaires depuis l'utilisation du module logging
 
 
 fn capture_screen_internal() -> Result<String, String> {
@@ -92,11 +95,20 @@ fn start_window_dragging(app: AppHandle) -> tauri::Result<()> {
 }
 
 #[tauri::command]
-fn resize_window(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
-    if let Some(window) = app.get_webview_window("hud") {
-        window.set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }))?;
-    }
-    Ok(())
+fn resize_window(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    use validation::{validate_and_rate_limit, WindowSize};
+    
+    let size = WindowSize { width, height };
+    
+    validate_and_rate_limit("resize_window", size, |validated_size| {
+        if let Some(window) = app.get_webview_window("hud") {
+            window.set_size(tauri::Size::Logical(tauri::LogicalSize { 
+                width: validated_size.width, 
+                height: validated_size.height 
+            })).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    })
 }
 
 
@@ -246,8 +258,26 @@ fn panel_hide(app: AppHandle) -> tauri::Result<()> {
 }
 
 #[tauri::command]
-fn toggle_stealth_cmd(app: AppHandle) {
-    stealth::toggle_stealth(&app);
+fn toggle_stealth_cmd(app: AppHandle) -> Result<bool, String> {
+    use validation::check_rate_limit;
+    
+    // Rate limit cette commande sensible
+    check_rate_limit("toggle_stealth_cmd").map_err(|e| e.to_string())?;
+    
+    stealth::toggle_stealth(&app).map_err(|e| e.to_string())?;
+    let active = app.state::<stealth::StealthState>().is_active();
+    
+    // Émettre un événement enrichi avec métadonnées
+    let _ = app.emit("stealth:changed", serde_json::json!({
+        "active": active,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "observability_disabled": active,
+        "source": "manual_toggle"
+    }));
+    
+    info!("🔄 Stealth mode toggled: {} (manual)", if active { "ON" } else { "OFF" });
+    
+    Ok(active)
 }
 
 #[tauri::command]
@@ -258,72 +288,69 @@ fn get_stealth_status(app: AppHandle) -> bool {
 #[tauri::command]
 fn test_stealth_manual(app: AppHandle) {
     println!("🧪 Test manuel du mode furtif");
-    stealth::toggle_stealth(&app);
+    let _ = stealth::toggle_stealth(&app);
 }
 
-// Commandes pour le stockage sécurisé
+// Commandes pour le stockage sécurisé - avec validation
 #[tauri::command]
 fn secure_store(key: String, value: String) -> Result<(), String> {
     use keyring::Entry;
+    use validation::{validate_and_rate_limit, SecureKeyValue};
     
-    let entry = Entry::new("numa", &key)
-        .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+    let kv = SecureKeyValue { key, value };
     
-    entry.set_password(&value)
-        .map_err(|e| format!("Erreur lors du stockage sécurisé: {}", e))?;
-    
-    Ok(())
+    validate_and_rate_limit("secure_store", kv, |validated_kv| {
+        let entry = Entry::new("numa", &validated_kv.key)
+            .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+        
+        entry.set_password(&validated_kv.value)
+            .map_err(|e| format!("Erreur lors du stockage sécurisé: {}", e))?;
+        
+        Ok(())
+    })
 }
 
 #[tauri::command]
 fn secure_load(key: String) -> Result<String, String> {
     use keyring::Entry;
+    use validation::{validate_and_rate_limit, SecureKey};
     
-    let entry = Entry::new("numa", &key)
-        .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+    let secure_key = SecureKey { key };
     
-    entry.get_password()
-        .map_err(|e| format!("Erreur lors de la récupération sécurisée: {}", e))
+    validate_and_rate_limit("secure_load", secure_key, |validated_key| {
+        let entry = Entry::new("numa", &validated_key.key)
+            .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+        
+        entry.get_password()
+            .map_err(|e| format!("Erreur lors de la récupération sécurisée: {}", e))
+    })
 }
 
 #[tauri::command]
 fn secure_delete(key: String) -> Result<(), String> {
     use keyring::Entry;
+    use validation::{validate_and_rate_limit, SecureKey};
     
-    let entry = Entry::new("numa", &key)
-        .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+    let secure_key = SecureKey { key };
     
-    entry.delete_password()
-        .map_err(|e| format!("Erreur lors de la suppression sécurisée: {}", e))?;
-    
-    Ok(())
+    validate_and_rate_limit("secure_delete", secure_key, |validated_key| {
+        let entry = Entry::new("numa", &validated_key.key)
+            .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+        
+        entry.delete_password()
+            .map_err(|e| format!("Erreur lors de la suppression sécurisée: {}", e))?;
+        
+        Ok(())
+    })
 }
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Initialiser le logging selon les features
-    #[cfg(feature = "debug")]
-    {
-        tracing_subscriber::registry()
-            .with(tracing_subscriber::EnvFilter::new(
-                std::env::var("RUST_LOG").unwrap_or_else(|_| "debug".into())
-            ))
-            .with(tracing_subscriber::fmt::layer().with_ansi(true))
-            .init();
-    }
+    // 🚀 Initialize comprehensive logging system FIRST
+    logging::init_comprehensive_logging();
 
-    #[cfg(not(feature = "debug"))]
-    {
-        tracing_subscriber::registry()
-            .with(tracing_subscriber::EnvFilter::new(
-                std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into())
-            ))
-            .with(tracing_subscriber::fmt::layer())
-            .init();
-    }
-
-    info!("Starting Numa application...");
+    info!("🚀 Starting Numa application...");
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     {
         info!("🕵️ Stealth mode enabled - macOS private APIs active");
@@ -350,7 +377,9 @@ pub fn run() {
             test_stealth_manual,
             secure_store,
             secure_load,
-            secure_delete
+            secure_delete,
+            csp_manager::get_dynamic_csp_policy,
+            csp_manager::get_csp_for_context
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
@@ -366,7 +395,7 @@ pub fn run() {
                 info!("HUD window focused");
             }
             
-            // Activer le mode furtif automatiquement au démarrage seulement si la feature est activée
+            // 🚀 Setup background tasks
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(1000));
@@ -384,6 +413,16 @@ pub fn run() {
                 {
                     info!("🕵️ Skipping stealth activation - feature not enabled");
                 }
+                
+                // 🧹 Setup periodic rate limiter cleanup
+                let _app_handle_cleanup = app_handle.clone();
+                std::thread::spawn(move || {
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_secs(300)); // Every 5 minutes
+                        validation::cleanup_rate_limiter();
+                        debug!("🧹 Rate limiter cleanup completed");
+                    }
+                });
                 
                 // Émettre un événement pour signaler que l'application est prête
                 if let Err(e) = app_handle.emit("app-ready", ()) {
