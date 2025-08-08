@@ -1,0 +1,434 @@
+/* Styles d'accessibilité pour Numa - Version corrigée */
+
+/* Réduction des mouvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mode contraste élevé */
+@media (prefers-contrast: high) {
+  .high-contrast {
+    --tw-border-opacity: 1;
+    border-color: rgb(0 0 0 / var(--tw-border-opacity));
+  }
+  
+  .high-contrast button {
+    border: 2px solid currentColor;
+  }
+  
+  .high-contrast input,
+  .high-contrast select,
+  .high-contrast textarea {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Focus visible pour tous les éléments interactifs */
+*:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Focus visible pour les éléments avec focus ring */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Masquer le focus pour les éléments avec focus ring personnalisé */
+.focus\:outline-none:focus {
+  outline: none;
+}
+
+/* Styles pour les éléments avec focus ring */
+.focus\:ring-2:focus {
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Amélioration du contraste pour les liens */
+a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Styles pour les boutons avec états visuels clairs */
+button {
+  position: relative;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+/* Amélioration de la lisibilité du texte */
+.text-sm {
+  line-height: 1.5;
+}
+
+.text-xs {
+  line-height: 1.4;
+}
+
+/* Espacement amélioré pour les listes */
+ul, ol {
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+/* Styles pour les formulaires accessibles */
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.5rem;
+}
+
+/* Styles pour les messages d'erreur */
+.error-message {
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+/* Styles pour les messages de succès */
+.success-message {
+  color: #059669;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+/* Styles pour les éléments en cours de chargement */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Styles pour les éléments désactivés */
+.disabled,
+[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Amélioration de la navigation au clavier */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #3b82f6;
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 1000;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Styles pour les tooltips accessibles */
+.tooltip {
+  position: relative;
+}
+
+.tooltip[data-tooltip]:hover::after,
+.tooltip[data-tooltip]:focus::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* Styles pour les notifications accessibles */
+.notification {
+  position: relative;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.notification[role="alert"] {
+  border-left: 4px solid #3b82f6;
+}
+
+.notification[role="alert"].error {
+  border-left-color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.notification[role="alert"].success {
+  border-left-color: #059669;
+  background-color: #f0fdf4;
+}
+
+.notification[role="alert"].warning {
+  border-left-color: #d97706;
+  background-color: #fffbeb;
+}
+
+/* Styles pour les modales accessibles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 50;
+}
+
+.modal-content {
+  position: relative;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+/* Styles pour les tableaux accessibles */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid #d1d5db;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+/* Styles pour les images avec alt text */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Styles pour les icônes décoratives */
+.icon-decorative {
+  aria-hidden: true;
+}
+
+/* Styles pour les éléments avec ARIA live regions */
+[aria-live="polite"] {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+[aria-live="assertive"] {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Styles pour les éléments avec ARIA expanded */
+[aria-expanded="true"] .expand-icon {
+  transform: rotate(180deg);
+}
+
+/* Styles pour les éléments avec ARIA selected */
+[aria-selected="true"] {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Styles pour les éléments avec ARIA pressed */
+[aria-pressed="true"] {
+  background-color: #1d4ed8;
+  color: white;
+}
+
+/* Styles pour les éléments avec ARIA current */
+[aria-current="page"] {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Styles pour les éléments avec ARIA invalid */
+[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+
+/* Styles pour les éléments avec ARIA required */
+[aria-required="true"]::after {
+  content: " *";
+  color: #dc2626;
+}
+
+/* Styles pour les éléments avec ARIA describedby */
+[aria-describedby] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA labelledby */
+[aria-labelledby] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA controls */
+[aria-controls] {
+  cursor: pointer;
+}
+
+/* Styles pour les éléments avec ARIA owns */
+[aria-owns] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA activedescendant */
+[aria-activedescendant] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA autocomplete */
+[aria-autocomplete="list"] {
+  position: relative;
+}
+
+[aria-autocomplete="inline"] {
+  position: relative;
+}
+
+[aria-autocomplete="both"] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA multiselectable */
+[aria-multiselectable="true"] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA orientation */
+[aria-orientation="horizontal"] {
+  display: flex;
+  flex-direction: row;
+}
+
+[aria-orientation="vertical"] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Styles pour les éléments avec ARIA sort */
+[aria-sort="ascending"]::after {
+  content: " ↑";
+}
+
+[aria-sort="descending"]::after {
+  content: " ↓";
+}
+
+[aria-sort="none"]::after {
+  content: " ↔";
+}
+
+/* Styles pour les éléments avec ARIA valuemin, valuemax, valuenow */
+[aria-valuemin][aria-valuemax][aria-valuenow] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA valuetext */
+[aria-valuetext] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA busy */
+[aria-busy="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Note: Les règles [aria-hidden="true"] ont été supprimées car elles interféraient avec les fenêtres Tauri */
+
+/* Styles pour les éléments avec ARIA atomic */
+[aria-atomic="true"] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA relevant */
+[aria-relevant="additions"] {
+  position: relative;
+}
+
+[aria-relevant="removals"] {
+  position: relative;
+}
+
+[aria-relevant="text"] {
+  position: relative;
+}
+
+[aria-relevant="all"] {
+  position: relative;
+}
+
+/* Styles pour les éléments avec ARIA dropeffect */
+[aria-dropeffect="copy"] {
+  cursor: copy;
+}
+
+[aria-dropeffect="move"] {
+  cursor: move;
+}
+
+[aria-dropeffect="link"] {
+  cursor: pointer;
+}
+
+[aria-dropeffect="execute"] {
+  cursor: pointer;
+}
+
+[aria-dropeffect="popup"] {
+  cursor: pointer;
+}
+
+[aria-dropeffect="none"] {
+  cursor: default;
+}
+
+/* Styles pour les éléments avec ARIA grabbed */
+[aria-grabbed="true"] {
+  opacity: 0.6;
+}
