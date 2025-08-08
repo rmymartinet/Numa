@@ -4,6 +4,7 @@ import AppWithRouter from './AppWithRouter';
 import { errorReporter, setupGlobalErrorHandling } from './utils/errorReporting';
 import { logger } from './utils/logger';
 import { metricsTracker } from './utils/metrics';
+import './styles/accessibility.css';
 
 // Initialiser l'observabilité
 logger.info('Application démarrée', { 

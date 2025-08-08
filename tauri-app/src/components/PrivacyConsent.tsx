@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
 import { errorReporter } from '../utils/errorReporting';
 import { metricsTracker } from '../utils/metrics';
+import AccessibleModal from './ui/AccessibleModal';
+import AccessibleButton from './ui/AccessibleButton';
 
 interface PrivacyConsentProps {
-  onClose?: () => void;
+  onClose: () => void;
   show?: boolean;
 }
 
@@ -65,24 +67,13 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onClose, show = false }
     onClose?.();
   };
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Confidentialité et Observabilité
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <AccessibleModal
+      isOpen={show}
+      onClose={onClose}
+      title="Confidentialité et Observabilité"
+      size="md"
+    >
 
         <div className="space-y-4 mb-6">
           <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -149,18 +140,20 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onClose, show = false }
         </div>
 
         <div className="flex space-x-3">
-          <button
+          <AccessibleButton
             onClick={handleSave}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+            variant="primary"
+            className="flex-1"
           >
             Enregistrer
-          </button>
-          <button
+          </AccessibleButton>
+          <AccessibleButton
             onClick={onClose}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-700 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+            variant="outline"
+            className="flex-1"
           >
             Annuler
-          </button>
+          </AccessibleButton>
         </div>
 
         <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
@@ -169,8 +162,7 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onClose, show = false }
             Aucune donnée personnelle n'est collectée.
           </p>
         </div>
-      </div>
-    </div>
+    </AccessibleModal>
   );
 };
 
