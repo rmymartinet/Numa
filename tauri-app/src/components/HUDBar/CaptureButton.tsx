@@ -1,4 +1,5 @@
 import React from 'react';
+import { AudioLines } from 'lucide-react';
 
 interface CaptureButtonProps {
   isListening: boolean;
@@ -39,43 +40,7 @@ const CaptureButton: React.FC<CaptureButtonProps> = ({
         justifyContent: 'center',
       }}
     >
-      {/* Icône audio */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: '2px',
-          height: '16px',
-        }}
-      >
-        <div
-          style={{
-            width: '3px',
-            backgroundColor: 'white',
-            borderRadius: '1px',
-            height: isListening ? '16px' : '8px',
-            transition: 'height 0.3s ease',
-          }}
-        />
-        <div
-          style={{
-            width: '3px',
-            backgroundColor: 'white',
-            borderRadius: '1px',
-            height: isListening ? '12px' : '12px',
-            transition: 'height 0.3s ease',
-          }}
-        />
-        <div
-          style={{
-            width: '3px',
-            backgroundColor: 'white',
-            borderRadius: '1px',
-            height: isListening ? '8px' : '16px',
-            transition: 'height 0.3s ease',
-          }}
-        />
-      </div>
+      <AudioLines size={16} />
       <span>{isListening ? 'Listening...' : 'Listen'}</span>
     </button>
   );

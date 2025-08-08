@@ -21,17 +21,18 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder="I Ask..."
-          style={{
-            width: '100%',
-            padding: '8px 16px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            border: 'none',
-            borderRadius: '25px',
-            color: 'white',
-            fontSize: '14px',
-            outline: 'none',
-            transition: 'all 0.2s ease',
-          }}
+          className="glass__btn"
+          // style={{
+          //   width: '100%',
+          //   padding: '3px 3px',
+          //   backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          //   border: 'none',
+          //   borderRadius: '25px',
+          //   color: 'white',
+          //   fontSize: '14px',
+          //   outline: 'none',
+          //   transition: 'all 0.2s ease',
+          // }}
           onKeyPress={e => {
             if (e.key === 'Enter' && value.trim()) {
               console.log('Chat message envoyé:', value);

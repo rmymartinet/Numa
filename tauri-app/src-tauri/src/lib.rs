@@ -112,9 +112,6 @@ fn resize_window(app: AppHandle, width: f64, height: f64) -> Result<(), String> 
     })
 }
 
-
-
-
 // Configuration du panel
 const PANEL_WIDTH: f64 = 1072.0;
 const PANEL_HEIGHT: f64 = 618.0;

@@ -88,23 +88,6 @@ const HUDBar: React.FC<HUDBarProps> = ({
         onToggle={onTogglePanel}
       />
 
-      {/* Bouton de test du mode furtif */}
-      <GlassButton
-        onClick={async () => {
-          try {
-            await invoke('toggle_stealth_cmd');
-            console.log('Mode furtif activé/désactivé (bouton)');
-          } catch (error) {
-            console.error('Erreur lors du toggle du mode furtif:', error);
-          }
-        }}
-        size="small"
-        className="w-8 h-8 rounded-full text-sm"
-        title="Mode furtif (test)"
-      >
-        🕵️
-      </GlassButton>
-
       <CloseButton onClose={onClose} />
     </GlassContainer>
   );
