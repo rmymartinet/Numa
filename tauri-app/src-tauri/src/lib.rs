@@ -1,10 +1,14 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 mod stealth;
+mod platform;
+mod errors;
 #[cfg(test)]
 mod tests;
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
+use tracing::{info, warn, error};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 
 fn capture_screen_internal() -> Result<String, String> {
@@ -255,6 +259,16 @@ fn test_stealth_manual(app: AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialiser le logging
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into())
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+    info!("Starting Numa application...");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(stealth::StealthState::default())
@@ -277,9 +291,12 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            info!("Setting up application...");
+            
             // Forcer le HUD au premier plan
             if let Some(hud_win) = app.get_webview_window("hud") {
                 hud_win.set_focus().ok();
+                info!("HUD window focused");
             }
             
             // Activer le mode furtif automatiquement au démarrage
@@ -287,9 +304,12 @@ pub fn run() {
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(1000));
-                stealth::force_stealth_on(&app_handle);
+                if let Err(e) = stealth::force_stealth_on(&app_handle) {
+                    error!("Failed to force stealth on: {}", e);
+                }
             });
             
+            info!("Application setup complete");
             Ok(())
         })
         .run(tauri::generate_context!())
