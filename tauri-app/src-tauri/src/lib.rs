@@ -10,7 +10,7 @@ mod openai;
 #[cfg(test)]
 mod tests;
 
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow, Listener};
 use tracing::{info, warn, error, debug};
 // Note: Ces imports ne sont plus nécessaires depuis l'utilisation du module logging
 
@@ -279,6 +279,11 @@ fn ensure_response(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         "response",
         WebviewUrl::External("http://localhost:1420/#/response".parse().unwrap()),
     )
+    // .on_page_load(move |window, _| {
+    //     println!("🔔 Response window page loaded: {}", window.label());
+    //     // Open DevTools to debug
+    //     let _ = window.open_devtools();
+    // })
     .parent_raw(parent_ptr)                 // Child window du HUD
     .decorations(false)
     .transparent(true)
@@ -355,17 +360,33 @@ fn response_hide(app: AppHandle) -> tauri::Result<()> {
 }
 
 #[tauri::command]
+fn test_response_window(app: AppHandle) -> tauri::Result<()> {
+    println!("🧪 Testing response window...");
+
+    // Ensure response window exists
+    ensure_response(&app)?;
+    println!("🧪 Response window ensured");
+
+    let response = app.get_webview_window("response").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Response window not found")))?;
+    println!("🧪 Got response window");
+
+    // Show it
+    response.show()?;
+    println!("🧪 Response window shown");
+
+    // Test event emission
+    app.emit_to("response", "test:event", serde_json::json!({ "test": "Hello from Rust!" }))?;
+    println!("🧪 Test event emitted");
+
+    Ok(())
+}
+
+#[tauri::command]
 fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
     println!("🚀 start_chat called with message: {}", message);
-    
-    // Show response window first
-    ensure_response(&app)?;
-    println!("🚀 Response window ensured");
-    
-    let response = app.get_webview_window("response").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Response window not found")))?;
-    println!("🚀 Got response window");
 
-    // Make it visible
+    // 1) Assure/affiche la fenêtre réponse
+    let response = ensure_response(&app)?;
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     unsafe {
         use objc::{msg_send, sel, sel_impl};
@@ -373,15 +394,57 @@ fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
         let _: () = msg_send![win, setAlphaValue: 1.0];
         let _: () = msg_send![win, setIgnoresMouseEvents: false];
     }
-    
     apply_current_stealth(&app, &response)?;
     response.show()?;
     println!("🚀 Response window shown");
 
-    // Emit the event to the response window specifically
-    app.emit_to("response", "chat:start", serde_json::json!({ "message": message }))?;
-    println!("🚀 Event emitted to response window");
-    
+    // 2) Attends le "response:ready" envoyé par la webview, puis émet "chat:start"
+    let app_for_start = app.clone();
+    let msg_for_start = message.clone();
+    let mut chat_started = std::sync::Mutex::new(false);
+    app_for_start.clone().listen("response:ready", move |_| {
+        let mut started = chat_started.lock().unwrap();
+        if !*started {
+            *started = true;
+            println!("✅ response:ready received — emitting chat:start");
+            let _ = app_for_start.emit_to(
+                "response",
+                "chat:start",
+                serde_json::json!({ "message": msg_for_start }),
+            );
+        } else {
+            println!("⚠️ response:ready received again, ignoring");
+        }
+    });
+
+    // 3) Chat OpenAI en async, et on **cible** la fenêtre "response"
+    let app_clone = app.clone();
+    tauri::async_runtime::spawn(async move {
+        match openai::chat_with_openai(openai::ChatRequest {
+            message: message.clone(),
+            conversation_id: None,
+            context: None,
+        }).await {
+            Ok(chat_response) => {
+                println!("🤖 OpenAI response: {}", chat_response.message);
+                println!("🚀 Emitting chat:response to response window");
+                let _ = app_clone.emit_to("response", "chat:response", serde_json::json!({
+                    "message": chat_response.message,
+                    "conversation_id": chat_response.conversation_id,
+                    "tokens_used": chat_response.tokens_used,
+                    "model": chat_response.model,
+                }));
+                println!("✅ chat:response emitted");
+            }
+            Err(e) => {
+                println!("❌ OpenAI error: {}", e);
+                let _ = app_clone.emit_to("response", "chat:error", serde_json::json!({
+                    "error": e.to_string(),
+                }));
+            }
+        }
+    });
+
     Ok(())
 }
 
@@ -502,6 +565,7 @@ pub fn run() {
             panel_hide,
             response_show,
             response_hide,
+            test_response_window,
             start_chat,
             toggle_stealth_cmd,
             get_stealth_status,

@@ -4,6 +4,9 @@ import CaptureButton from './HUDBar/CaptureButton';
 import InputField from './HUDBar/InputField';
 import TogglePanelButton from './HUDBar/TogglePanelButton';
 import CloseButton from './HUDBar/CloseButton';
+import GlassContainer from './ui/GlassContainer';
+import GlassButton from './ui/GlassButton';
+import '../styles/glass.css';
 
 interface HUDBarProps {
   isListening: boolean;
@@ -47,33 +50,20 @@ const HUDBar: React.FC<HUDBarProps> = ({
   };
 
   return (
-    <div
+    <GlassContainer
+      // variant="pill"
+      className="min-w-[400px] max-w-[1000px] cursor-grab select-none z-[1000]"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '12px 20px',
-        backgroundColor: 'rgba(0, 0, 0, 0.9)', // Couleur normale
-        backdropFilter: 'blur(20px)',
-        borderRadius: '50px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-        minWidth: '400px',
-        maxWidth: '600px',
-        transition: 'all 0.3s ease',
         pointerEvents: 'auto',
-        cursor: 'grab',
-        zIndex: 1000,
-        userSelect: 'none',
       }}
       onMouseDown={handleMouseDown}
     >
       <CaptureButton isListening={isListening} onCapture={onCapture} />
 
-      <InputField 
-        ref={inputRef} 
-        value={inputText} 
-        onChange={onInputChange} 
+      <InputField
+        ref={inputRef}
+        value={inputText}
+        onChange={onInputChange}
         onChatSubmit={async (message: string) => {
           try {
             // Use the new start_chat command
@@ -99,7 +89,7 @@ const HUDBar: React.FC<HUDBarProps> = ({
       />
 
       {/* Bouton de test du mode furtif */}
-      <button
+      <GlassButton
         onClick={async () => {
           try {
             await invoke('toggle_stealth_cmd');
@@ -108,33 +98,15 @@ const HUDBar: React.FC<HUDBarProps> = ({
             console.error('Erreur lors du toggle du mode furtif:', error);
           }
         }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '32px',
-          height: '32px',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: '50%',
-          color: 'white',
-          fontSize: '14px',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-        }}
+        size="small"
+        className="w-8 h-8 rounded-full text-sm"
         title="Mode furtif (test)"
       >
         🕵️
-      </button>
+      </GlassButton>
 
       <CloseButton onClose={onClose} />
-    </div>
+    </GlassContainer>
   );
 };
 

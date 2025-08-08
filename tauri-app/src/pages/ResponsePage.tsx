@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -12,6 +12,11 @@ const ResponsePage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const readyEmittedRef = useRef(false);
+  const lastResponseRef = useRef<string>('');
+
+  // Debug: Log component mount
+  console.log('🔔 ResponsePage: Component rendering');
 
   // Auto-scroll to bottom when new content arrives
   useEffect(() => {
@@ -22,35 +27,93 @@ const ResponsePage: React.FC = () => {
 
   // Listen for chat events from the HUD
   useEffect(() => {
-    const setupEventListeners = async () => {
+    let unlistenFns: Array<() => void> = [];
+
+    (async () => {
       console.log('🔔 ResponsePage: Setting up event listeners...');
 
-      // Listen for new chat messages from HUD
-      const unlistenChatStart = await listen('chat:start', (event: any) => {
-        console.log(
-          '🔔 ResponsePage: Received chat:start event:',
-          event.payload
-        );
+      const u1 = await listen('test:event', (event: any) => {
+        console.log('🔔 ResponsePage: Received test event:', event.payload);
+        // alert('Test event received! Response window is working.');
+      });
 
+      const u2 = await listen('chat:start', (event: any) => {
+        console.log('🔔 ResponsePage: Received chat:start:', event.payload);
         const userMessage: Message = {
           role: 'user',
           content: event.payload.message,
           timestamp: new Date(),
         };
-
         setMessages([userMessage]);
         setIsStreaming(true);
-        handleChatResponse(event.payload.message);
       });
 
+      const u3 = await listen('chat:response', (event: any) => {
+        console.log('🔔 ResponsePage: Received chat:response:', event.payload);
+        console.log(
+          '🔔 ResponsePage: Current messages count:',
+          messages.length
+        );
+        console.log('🔔 ResponsePage: Listener ID for chat:response');
+
+        // Éviter les doublons en vérifiant si on a déjà reçu cette réponse
+        if (lastResponseRef.current === event.payload.message) {
+          console.log('⚠️ ResponsePage: Duplicate response detected, skipping');
+          return;
+        }
+
+        lastResponseRef.current = event.payload.message;
+
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: event.payload.message,
+          timestamp: new Date(),
+          isStreaming: false,
+        };
+        setMessages(prev => {
+          console.log(
+            '🔔 ResponsePage: Adding message, prev count:',
+            prev.length
+          );
+          return [...prev, assistantMessage];
+        });
+        setIsStreaming(false);
+      });
+
+      const u4 = await listen('chat:error', (event: any) => {
+        console.error('🔔 ResponsePage: Received chat:error:', event.payload);
+        const errorMessage: Message = {
+          role: 'assistant',
+          content: `Erreur: ${event.payload.error}`,
+          timestamp: new Date(),
+          isStreaming: false,
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        setIsStreaming(false);
+      });
+
+      unlistenFns.push(u1, u2, u3, u4);
       console.log('🔔 ResponsePage: Event listeners setup complete');
 
-      return () => {
-        unlistenChatStart();
-      };
-    };
+      // 🔑 Annoncer qu'on est prêt **après** l'enregistrement des listeners (une seule fois)
+      if (!readyEmittedRef.current) {
+        await emit('response:ready');
+        readyEmittedRef.current = true;
+        console.log('✅ ResponsePage: response:ready emitted');
+      } else {
+        console.log(
+          '⚠️ ResponsePage: response:ready already emitted, skipping'
+        );
+      }
+    })();
 
-    setupEventListeners();
+    return () => {
+      console.log('🔔 ResponsePage: Cleaning up event listeners');
+      for (const u of unlistenFns)
+        try {
+          u();
+        } catch {}
+    };
   }, []);
 
   const handleChatResponse = async (userMessage: string) => {
@@ -109,34 +172,23 @@ N'hésitez pas à me poser d'autres questions pour voir l'effet en action.`;
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          padding: '12px 16px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }}
-      >
-        <div
-          style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: isStreaming ? '#22c55e' : '#6b7280',
-            animation: isStreaming ? 'pulse 2s infinite' : 'none',
-          }}
-        />
-        <span
-          style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '12px',
-            fontWeight: '500',
-          }}
-        >
-          ChatGPT Response
-        </span>
+      {/* Header avec design Liquid Glass */}
+      <div className="glass" style={{ padding: '8px 10px', margin: '8px' }}>
+        <div className="glass__content" style={{ gap: 8 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 9999,
+              background: isStreaming ? '#22c55e' : '#6b7280',
+            }}
+          />
+          <span
+            style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)' }}
+          >
+            {isStreaming ? 'Streaming…' : 'Ready'}
+          </span>
+        </div>
       </div>
 
       {/* Messages */}
@@ -154,14 +206,52 @@ N'hésitez pas à me poser d'autres questions pour voir l'effet en action.`;
           <div
             style={{
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
               color: 'rgba(255, 255, 255, 0.5)',
               fontSize: '14px',
+              gap: '16px',
             }}
           >
-            En attente d'une question...
+            <div>En attente d'une question...</div>
+            <button
+              onClick={() => {
+                console.log('🔔 ResponsePage: Test button clicked');
+                const testMessage: Message = {
+                  role: 'user',
+                  content: 'Test question from button',
+                  timestamp: new Date(),
+                };
+                setMessages([testMessage]);
+                setIsStreaming(true);
+                handleChatResponse('Test question from button');
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '6px',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '12px',
+                marginBottom: '8px',
+              }}
+            >
+              Test Streaming
+            </button>
+            <div
+              style={{
+                fontSize: '10px',
+                color: 'rgba(255, 255, 255, 0.4)',
+                textAlign: 'center',
+              }}
+            >
+              Clé API configurée dans le code
+              <br />
+              Prêt pour les tests ChatGPT !
+            </div>
           </div>
         ) : (
           messages.map((message, index) => (

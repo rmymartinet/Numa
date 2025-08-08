@@ -35,6 +35,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
           onKeyPress={e => {
             if (e.key === 'Enter' && value.trim()) {
               console.log('Chat message envoyé:', value);
+              console.log('onChatSubmit:', onChatSubmit);
               onChatSubmit?.(value.trim());
               onChange('');
             }

@@ -1,0 +1,120 @@
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.18);
+  --glass-stroke-in: rgba(255, 255, 255, 0.55);
+  --glass-stroke-out: rgba(0, 0, 0, 0.15);
+  --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+  --glass-blur: 28px;
+  --glass-sat: 1.35;
+  --text-strong: rgba(255, 255, 255, 0.92);
+  --text-dim: rgba(255, 255, 255, 0.65);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.22);
+    --glass-stroke-out: rgba(0, 0, 0, 0.12);
+    --text-strong: rgba(0, 0, 0, 0.84);
+    --text-dim: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* Conteneur glass (pills/panels) */
+.glass {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  border-radius: 28px;
+  padding: 10px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow: var(--glass-shadow);
+}
+.glass::before,
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.glass::before {
+  box-shadow: inset 0 1px 0 var(--glass-stroke-in);
+  opacity: 0.9;
+}
+.glass::after {
+  box-shadow: 0 0 0 1px var(--glass-stroke-out);
+  opacity: 0.9;
+}
+
+/* Optionnel : grain très léger si besoin, ajouter la classe .glass--grain */
+.glass--grain::after {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px
+  );
+  background-size: 2px 2px;
+  mix-blend-mode: overlay;
+}
+
+.glass__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Boutons dans la pill */
+.glass__btn {
+  appearance: none;
+  border: 0;
+  border-radius: 16px;
+  padding: 10px 14px;
+  min-width: 88px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease,
+    box-shadow 0.12s ease,
+    color 0.12s ease;
+}
+.glass__btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.glass__btn:active {
+  transform: scale(0.98);
+}
+.glass__btn[aria-pressed='true'],
+.glass__btn.is-on {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+    inset 0 0 12px rgba(255, 255, 255, 0.25);
+}
+/* Focus clavier visible */
+.glass__btn:focus-visible {
+  outline: 2px solid rgba(0, 122, 255, 0.85);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+/* Mode compact (icônes seules si petite largeur) */
+@media (max-width: 520px) {
+  .glass__btn {
+    min-width: auto;
+    padding: 10px;
+  }
+  .glass__btn span.label {
+    display: none;
+  }
+}

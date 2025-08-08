@@ -9,7 +9,7 @@ import { useStealthObservability } from './hooks/useStealthObservability';
 const AppWithRouter: React.FC = () => {
   // Initialiser l'observabilité de manière différée
   useDelayedObservability();
-  
+
   // Gérer l'observabilité en fonction du mode furtif
   useStealthObservability();
 

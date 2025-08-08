@@ -32,9 +32,6 @@ const TogglePanelButton: React.FC<TogglePanelButtonProps> = ({
         transition: 'all 0.2s ease',
       }}
     >
-      <span>
-        {isExpanded ? 'Hide' : 'Show'} ({isExpanded ? 'ON' : 'OFF'})
-      </span>
       <div
         style={{
           width: '12px',

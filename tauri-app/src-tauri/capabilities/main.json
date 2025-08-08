@@ -2,10 +2,10 @@
   "$schema": "https://schema.tauri.app/capabilities/main.json",
   "identifier": "main-capability",
   "description": "Capability for the main window with strict security",
-  "windows": ["hud", "panel"],
+  "windows": ["hud", "panel", "response"],
   "permissions": [
     "core:path:default",
-    "core:event:default", 
+    "core:event:default",
     "core:window:default",
     "core:app:default",
     "core:resources:default",

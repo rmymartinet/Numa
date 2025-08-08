@@ -76,7 +76,7 @@ const CaptureButton: React.FC<CaptureButtonProps> = ({
           }}
         />
       </div>
-      <span>{isListening ? 'Capturing...' : 'Capture'}</span>
+      <span>{isListening ? 'Listening...' : 'Listen'}</span>
     </button>
   );
 };
