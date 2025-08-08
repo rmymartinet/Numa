@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import SettingsTab from './SettingsTab';
 import PrivacyConsent from './PrivacyConsent';
+import { CSPManager } from './CSPManager';
 
 const SettingsContent: React.FC = () => {
   const [activeSettingsTab, setActiveSettingsTab] = React.useState<
     'settings' | 'app' | 'profile' | 'security' | 'billing' | 'privacy'
   >('settings');
   const [showPrivacyConsent, setShowPrivacyConsent] = useState(false);
+  const [showCSPManager, setShowCSPManager] = useState(false);
 
   const settingsTabs = [
     { id: 'settings' as const, label: 'General Settings', icon: '⚙️' },

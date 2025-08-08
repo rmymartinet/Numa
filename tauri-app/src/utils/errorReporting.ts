@@ -2,6 +2,7 @@
 import * as Sentry from '@sentry/react';
 import { Replay } from '@sentry/replay';
 import { logger } from './logger';
+import { checkConsent, isDoNotTrackEnabled } from './privacyManager';
 
 // Configuration Sentry
 const SENTRY_DSN = process.env.VITE_SENTRY_DSN || '';
@@ -40,12 +41,17 @@ class ErrorReporter {
 
   // Initialiser Sentry
   initialize(): void {
-    if (!this.config.enabled || !this.config.dsn || !this.config.userConsent) {
+    if (!this.config.enabled || !this.config.dsn) {
       logger.info('Error reporting désactivé', {
         enabled: this.config.enabled,
         hasDsn: !!this.config.dsn,
-        userConsent: this.config.userConsent,
       });
+      return;
+    }
+
+    // Vérifier Do Not Track et consentement
+    if (isDoNotTrackEnabled() || !checkConsent('errorReporting')) {
+      logger.info('Error reporting désactivé - Do Not Track actif ou pas de consentement');
       return;
     }
 

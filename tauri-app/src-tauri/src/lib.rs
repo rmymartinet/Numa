@@ -256,6 +256,44 @@ fn test_stealth_manual(app: AppHandle) {
     stealth::toggle_stealth(&app);
 }
 
+// Commandes pour le stockage sécurisé
+#[tauri::command]
+fn secure_store(key: String, value: String) -> Result<(), String> {
+    use keyring::Entry;
+    
+    let entry = Entry::new("numa", &key)
+        .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+    
+    entry.set_password(&value)
+        .map_err(|e| format!("Erreur lors du stockage sécurisé: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+fn secure_load(key: String) -> Result<String, String> {
+    use keyring::Entry;
+    
+    let entry = Entry::new("numa", &key)
+        .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+    
+    entry.get_password()
+        .map_err(|e| format!("Erreur lors de la récupération sécurisée: {}", e))
+}
+
+#[tauri::command]
+fn secure_delete(key: String) -> Result<(), String> {
+    use keyring::Entry;
+    
+    let entry = Entry::new("numa", &key)
+        .map_err(|e| format!("Erreur lors de la création de l'entrée: {}", e))?;
+    
+    entry.delete_password()
+        .map_err(|e| format!("Erreur lors de la suppression sécurisée: {}", e))?;
+    
+    Ok(())
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -290,7 +328,7 @@ pub fn run() {
                 window.app_handle().exit(0);
             }
         })
-        .setup(|app| {
+                            .setup(|app| {
             info!("Setting up application...");
             
             // Forcer le HUD au premier plan
@@ -317,8 +355,8 @@ pub fn run() {
             });
             
             info!("Application setup complete");
-            Ok(())
-        })
+                        Ok(())
+                    })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

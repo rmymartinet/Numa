@@ -1,3 +1,5 @@
+import { checkConsent, isDoNotTrackEnabled } from './privacyManager';
+
 // Système de monitoring des métriques pour Numa
 
 interface PerformanceMetric {
@@ -381,6 +383,11 @@ class MetricsTracker {
 
   // Vérifier si on doit tracker (sampling + consentement)
   private shouldTrack(): boolean {
+    // Vérifier Do Not Track et consentement
+    if (isDoNotTrackEnabled() || !checkConsent('metrics')) {
+      return false;
+    }
+    
     return this.isEnabled && this.userConsent && Math.random() <= this.samplingRate;
   }
 

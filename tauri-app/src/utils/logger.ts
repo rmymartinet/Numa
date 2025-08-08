@@ -1,3 +1,5 @@
+import { checkConsent, isDoNotTrackEnabled } from './privacyManager';
+
 // Types pour les niveaux de log
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -80,6 +82,9 @@ class Logger {
   ): void {
     if (!this.shouldLog(level)) return;
 
+    // Vérifier Do Not Track et consentement pour l'envoi réseau
+    const canSendNetwork = !isDoNotTrackEnabled() && checkConsent('logging');
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -125,7 +130,7 @@ class Logger {
     }
 
     // Batch sending (production + consentement)
-    if (this.config.enableBatchSending && this.config.userConsent) {
+    if (this.config.enableBatchSending && canSendNetwork) {
       this.pendingLogs.push(entry);
       
       // Envoyer immédiatement si on atteint la taille du batch
