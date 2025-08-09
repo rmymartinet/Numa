@@ -49,6 +49,27 @@ const HUDBar: React.FC<HUDBarProps> = ({
     }
   };
 
+  // 🔧 Fonctions de debug temporaires
+  const handleDebugPositions = async () => {
+    try {
+      const result = await invoke('debug_get_positions') as string;
+      console.log('🔍 Debug positions:', result);
+      alert(result);
+    } catch (error) {
+      console.error('Erreur debug positions:', error);
+    }
+  };
+
+  const handleForceReposition = async () => {
+    try {
+      const result = await invoke('debug_force_reposition') as string;
+      console.log('🔧 Force reposition:', result);
+      alert(result);
+    } catch (error) {
+      console.error('Erreur force reposition:', error);
+    }
+  };
+
   return (
     <GlassContainer
       // variant="pill"
@@ -89,6 +110,21 @@ const HUDBar: React.FC<HUDBarProps> = ({
       />
 
       <CloseButton onClose={onClose} />
+
+      {/* 🔧 Boutons de debug temporaires */}
+      <GlassButton
+        onClick={handleDebugPositions}
+        title="Debug: Afficher positions actuelles"
+      >
+        📍
+      </GlassButton>
+
+      <GlassButton
+        onClick={handleForceReposition}
+        title="Debug: Forcer le repositionnement du panel"
+      >
+        🔧
+      </GlassButton>
     </GlassContainer>
   );
 };

@@ -222,8 +222,21 @@ fn ensure_panel(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 #[tauri::command]
 fn panel_show(app: AppHandle) -> tauri::Result<()> {
     ensure_panel(&app)?;
-    let _hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let panel = app.get_webview_window("panel").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Panel window not found")))?;
+
+    // 🎯 SOLUTION 1 : Tout en coordonnées physiques pour éviter les décalages
+    let hud_pos = hud.outer_position().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD position: {}", e))))?;
+    let hud_size = hud.outer_size().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD size: {}", e))))?;
+    
+    // Calculer la position exacte : panel centré sous le HUD (tout en coordonnées physiques)
+    let panel_x = hud_pos.x - (PANEL_WIDTH as i32 - hud_size.width as i32) / 2;  // Centré par rapport au HUD
+    let panel_y = hud_pos.y + hud_size.height as i32 + 20;  // 20px en dessous du HUD
+    
+    println!("🎯 Position HUD physique: ({}, {}), Panel calculé: ({}, {})", hud_pos.x, hud_pos.y, panel_x, panel_y);
+    
+    // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition
+    panel.set_position(tauri::PhysicalPosition::new(panel_x, panel_y)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set panel position: {}", e))))?;
 
     // 1) Rendre visible et interactif
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
@@ -259,6 +272,52 @@ fn panel_hide(app: AppHandle) -> tauri::Result<()> {
         apply_current_stealth(&app, &panel)?;
     }
     Ok(())
+}
+
+// 🔧 Commandes de debug pour les positions (comme suggéré par l'IA)
+#[tauri::command]
+fn debug_get_positions(app: AppHandle) -> Result<String, String> {
+    let mut debug_info = String::new();
+    
+    if let Some(hud) = app.get_webview_window("hud") {
+        match (hud.outer_position(), hud.outer_size()) {
+            (Ok(pos), Ok(size)) => {
+                debug_info.push_str(&format!("📍 HUD: position=({}, {}), size={}x{}\n", pos.x, pos.y, size.width, size.height));
+            }
+            _ => debug_info.push_str("❌ Impossible de récupérer les infos HUD\n"),
+        }
+    }
+    
+    if let Some(panel) = app.get_webview_window("panel") {
+        match (panel.outer_position(), panel.outer_size()) {
+            (Ok(pos), Ok(size)) => {
+                debug_info.push_str(&format!("📍 Panel: position=({}, {}), size={}x{}\n", pos.x, pos.y, size.width, size.height));
+            }
+            _ => debug_info.push_str("❌ Impossible de récupérer les infos Panel\n"),
+        }
+    } else {
+        debug_info.push_str("❌ Panel n'existe pas encore\n");
+    }
+    
+    Ok(debug_info)
+}
+
+#[tauri::command]
+fn debug_force_reposition(app: AppHandle) -> Result<String, String> {
+    let hud = app.get_webview_window("hud").ok_or("HUD window not found")?;
+    let panel = app.get_webview_window("panel").ok_or("Panel window not found")?;
+    
+    let hud_pos = hud.outer_position().map_err(|e| format!("Failed to get HUD position: {}", e))?;
+    let hud_size = hud.outer_size().map_err(|e| format!("Failed to get HUD size: {}", e))?;
+    
+    let panel_x = hud_pos.x - (PANEL_WIDTH as i32 - hud_size.width as i32) / 2;
+    let panel_y = hud_pos.y + hud_size.height as i32 + 20;
+    
+    // 🔑 MÊME CORRECTION : PhysicalPosition pour cohérence
+    panel.set_position(tauri::PhysicalPosition::new(panel_x, panel_y))
+        .map_err(|e| format!("Failed to set panel position: {}", e))?;
+    
+    Ok(format!("🔧 Panel repositionné à ({}, {}) [PHYSIQUE]", panel_x, panel_y))
 }
 
 // === RESPONSE WINDOW MANAGEMENT ===
@@ -560,6 +619,8 @@ pub fn run() {
             resize_window,
             panel_show,
             panel_hide,
+            debug_get_positions,
+            debug_force_reposition,
             response_show,
             response_hide,
             test_response_window,
