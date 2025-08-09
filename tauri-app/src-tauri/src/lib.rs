@@ -447,7 +447,52 @@ fn ensure_response(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 #[tauri::command]
 fn response_show(app: AppHandle) -> tauri::Result<()> {
     ensure_response(&app)?;
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let response = app.get_webview_window("response").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Response window not found")))?;
+
+    // 🎯 POSITIONNEMENT DYNAMIQUE ResponsePage : Même logique que le panel
+    
+    // 0) Écran du HUD et ses caractéristiques
+    let monitor = hud.current_monitor().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get monitor: {}", e))))?.ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "No monitor found")))?;
+    let scale = monitor.scale_factor();
+    let mon_pos_phys = monitor.position(); // Origine physique de l'écran dans le desktop virtuel
+
+    // 1) Position/taille HUD (physique globale → locale physique → logique)
+    let hud_pos_phys_global = hud.outer_position().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD position: {}", e))))?;
+    let hud_pos_phys_local = tauri::PhysicalPosition::new(
+        hud_pos_phys_global.x - mon_pos_phys.x,
+        hud_pos_phys_global.y - mon_pos_phys.y,
+    );
+    let hud_pos_log: tauri::LogicalPosition<f64> = hud_pos_phys_local.to_logical(scale);
+    let hud_size_log: tauri::LogicalSize<f64> = hud.outer_size().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD size: {}", e))))?.to_logical(scale);
+
+    // 2) Taille response en logique (constante connue)
+    let response_size_log = tauri::LogicalSize::new(RESPONSE_WIDTH as f64, RESPONSE_HEIGHT as f64);
+
+    // 3) Offset manuel par écran selon scale factor (même logique que panel)
+    let x_manual_points = match scale {
+        s if (s - 2.0).abs() < 0.01 => 0.0,   // Retina (scale=2.0): parfait
+        s if (s - 1.0).abs() < 0.01 => -20.0, // HDMI (scale=1.0): décaler vers la gauche
+        _ => -10.0, // Autres scales: ajustement moyen
+    };
+
+    // 4) Calculs en logique (espace visuel cohérent)
+    let gap_y_points = 20.0;
+    let target_x_log = hud_pos_log.x + (hud_size_log.width - response_size_log.width) / 2.0 + x_manual_points;
+    let target_y_log = hud_pos_log.y + hud_size_log.height + gap_y_points;
+
+    // 5) Retour en physique avec arrondi + coordonnées globales
+    let target_x_phys_global = (target_x_log * scale).round() as i32 + mon_pos_phys.x;
+    let target_y_phys_global = (target_y_log * scale).round() as i32 + mon_pos_phys.y;
+    
+    let response_x = target_x_phys_global;
+    let response_y = target_y_phys_global;
+
+    println!("🎯 ResponsePage Scale: {}, HUD logique: ({:.1}, {:.1}), Response logique: ({:.1}, {:.1})", scale, hud_pos_log.x, hud_pos_log.y, target_x_log, target_y_log);
+    println!("🎯 ResponsePage Position finale physique: Response=({}, {})", response_x, response_y);
+
+    // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition  
+    response.set_position(tauri::PhysicalPosition::new(response_x, response_y)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set response position: {}", e))))?;
 
     // Rendre visible
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]

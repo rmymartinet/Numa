@@ -70,13 +70,13 @@ const HUDBar: React.FC<HUDBarProps> = ({
     }
   };
 
-  // 🔧 Fonction pour forcer le redraw du HUD (fix ghosting)
-  const handleForceRedraw = async () => {
+  // 💬 Fonction pour afficher la ResponsePage (fenêtre de chat)
+  const handleAskClick = async () => {
     try {
-      await invoke('force_hud_redraw');
-      console.log('🔧 HUD redraw forcé');
+      await invoke('response_show');
+      console.log('ResponsePage affichée');
     } catch (error) {
-      console.error('Erreur force redraw:', error);
+      console.error('Erreur lors de l\'affichage de la ResponsePage:', error);
     }
   };
 
@@ -95,7 +95,7 @@ const HUDBar: React.FC<HUDBarProps> = ({
         <span className="text-sm">Context</span>
       </GlassButton>
 
-      <GlassButton>
+      <GlassButton onClick={handleAskClick}>
         <span className="text-sm">Ask</span>
       </GlassButton>
       {/*
@@ -142,13 +142,6 @@ const HUDBar: React.FC<HUDBarProps> = ({
         title="Debug: Forcer le repositionnement du panel"
       >
         🔧
-      </GlassButton>
-
-      <GlassButton
-        onClick={handleForceRedraw}
-        title="Fix: Éliminer l'effet ghosting/double image"
-      >
-        🎨
       </GlassButton>
     </GlassContainer>
   );

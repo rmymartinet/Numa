@@ -25,6 +25,7 @@
   display: inline-flex;
   border-radius: 28px;
   padding: 10px;
+  border: solid 1px red;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
@@ -81,6 +82,10 @@
 }
 
 @keyframes forceRedraw {
-  0% { opacity: 0.9999; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0.9999;
+  }
+  100% {
+    opacity: 1;
+  }
 }
