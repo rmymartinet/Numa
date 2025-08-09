@@ -198,6 +198,139 @@ const CONTEXT_HEIGHT: f64 = 400.0;
 const CONTEXT_INITIAL_X: f64 = 400.0;  
 const CONTEXT_INITIAL_Y: f64 = 490.0;
 
+// === LAYOUT MANAGER AUTOMATIQUE ===
+
+#[derive(Clone, Copy, Debug)]
+struct RectI {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+}
+
+impl RectI {
+    fn right(&self) -> i32 { self.x + self.w }
+    fn bottom(&self) -> i32 { self.y + self.h }
+}
+
+fn get_rect(win: &tauri::WebviewWindow) -> tauri::Result<RectI> {
+    let p = win.outer_position()?;
+    let s = win.outer_size()?;
+    Ok(RectI { x: p.x, y: p.y, w: s.width as i32, h: s.height as i32 })
+}
+
+fn set_pos(win: &tauri::WebviewWindow, x: i32, y: i32) -> tauri::Result<()> {
+    win.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)))
+}
+
+fn screen_frame_of(window: &tauri::WebviewWindow) -> tauri::Result<RectI> {
+    let mon = window
+        .current_monitor()?
+        .ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "No monitor")))?;
+    let pos = mon.position();
+    let size = mon.size(); // physical
+    Ok(RectI { x: pos.x, y: pos.y, w: size.width as i32, h: size.height as i32 })
+}
+
+fn arrange_hud_children(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let hud = app.get_webview_window("hud")
+        .ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD not found")))?;
+    let hud_r = get_rect(&hud)?;
+    let screen = screen_frame_of(&hud)?;
+
+    let input = app.get_webview_window("input");
+    let context = app.get_webview_window("context");
+
+    let mut input_vis = false;
+    let mut context_vis = false;
+
+    if let Some(w) = &input { input_vis = w.is_visible().unwrap_or(false); }
+    if let Some(w) = &context { context_vis = w.is_visible().unwrap_or(false); }
+
+    // Rien à faire
+    if !input_vis && !context_vis { return Ok(()); }
+
+    // Constantes layout
+    const GAP: i32 = 12;         // marge entre fenêtres
+    const HUD_GAP_Y: i32 = 20;   // marge sous le HUD
+
+    // Slot "ligne" sous HUD
+    let line_y = hud_r.bottom() + HUD_GAP_Y;
+
+    // Fonction pour centrer une largeur donnée sous HUD
+    let center_x = |width: i32| hud_r.x + (hud_r.w - width) / 2;
+
+    // Récup tailles actuelles (outer_size)
+    let input_size = if let Some(w) = &input {
+        let s = w.outer_size()?;
+        (s.width as i32, s.height as i32)
+    } else { (0, 0) };
+
+    let context_size = if let Some(w) = &context {
+        let s = w.outer_size()?;
+        (s.width as i32, s.height as i32)
+    } else { (0, 0) };
+
+    println!("🎯 Layout Manager - HUD: {:?}, Screen: {:?}", hud_r, screen);
+    println!("🎯 Layout Manager - Input: visible={}, size={:?}", input_vis, input_size);
+    println!("🎯 Layout Manager - Context: visible={}, size={:?}", context_vis, context_size);
+
+    match (input_vis, context_vis) {
+        (true, false) => {
+            // Uniquement input → centré sous HUD
+            if let Some(w) = &input {
+                let x = center_x(input_size.0);
+                println!("🎯 Layout: Input seul, centré à ({}, {})", x, line_y);
+                set_pos(w, x, line_y)?;
+            }
+        }
+        (false, true) => {
+            // Uniquement context → centré sous HUD
+            if let Some(w) = &context {
+                let x = center_x(context_size.0);
+                println!("🎯 Layout: Context seul, centré à ({}, {})", x, line_y);
+                set_pos(w, x, line_y)?;
+            }
+        }
+        (true, true) => {
+            // Les deux visibles → tenter côte à côte
+            let total_w = input_size.0 + GAP + context_size.0;
+            let left_x = center_x(total_w);
+            let right_x = left_x + input_size.0 + GAP;
+
+            let fits_horizontally =
+                left_x >= screen.x &&
+                (right_x + context_size.0) <= (screen.x + screen.w);
+
+            if fits_horizontally {
+                // input gauche, context droite
+                println!("🎯 Layout: Côte à côte - Input à ({}, {}), Context à ({}, {})", left_x, line_y, right_x, line_y);
+                if let Some(wi) = &input { set_pos(wi, left_x, line_y)?; }
+                if let Some(wc) = &context { set_pos(wc, right_x, line_y)?; }
+            } else {
+                // Fallback : pile (context sous input)
+                let input_x = center_x(input_size.0);
+                let context_x = center_x(context_size.0);
+                let context_y = line_y + input_size.1 + GAP;
+
+                // Si la pile dépasse le bas de l'écran, on remonte au max
+                let max_bottom = context_y + context_size.1;
+                let overflow = max_bottom - (screen.y + screen.h);
+                let adjust = if overflow > 0 { overflow } else { 0 };
+
+                println!("🎯 Layout: Pile verticale - Input à ({}, {}), Context à ({}, {}), adjust={}", 
+                         input_x, line_y - adjust, context_x, context_y - adjust, adjust);
+                if let Some(wi) = &input { set_pos(wi, input_x, line_y - adjust)?; }
+                if let Some(wc) = &context { set_pos(wc, context_x, context_y - adjust)?; }
+            }
+        }
+        (false, false) => {
+            // Cas déjà géré plus haut
+        }
+    }
+    Ok(())
+}
+
 // === FONCTIONS GÉNÉRIQUES POUR FENÊTRES DRAGGABLES ===
 
 #[derive(Debug, Clone)]
@@ -281,41 +414,7 @@ fn ensure_draggable_window(app: &AppHandle, window_name: &str, config: Draggable
 
 fn show_draggable_window(app: &AppHandle, window_name: &str, config: DraggableWindowConfig) -> tauri::Result<()> {
     ensure_draggable_window(app, window_name, config.clone())?;
-    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let window = app.get_webview_window(window_name).ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, format!("{} window not found", window_name))))?;
-
-    // Positionnement dynamique (même logique pour toutes les fenêtres)
-    let monitor = hud.current_monitor().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get monitor: {}", e))))?.ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "No monitor found")))?;
-    let scale = monitor.scale_factor();
-    let mon_pos_phys = monitor.position();
-
-    let hud_pos_phys_global = hud.outer_position().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD position: {}", e))))?;
-    let hud_pos_phys_local = tauri::PhysicalPosition::new(
-        hud_pos_phys_global.x - mon_pos_phys.x,
-        hud_pos_phys_global.y - mon_pos_phys.y,
-    );
-    let hud_pos_log: tauri::LogicalPosition<f64> = hud_pos_phys_local.to_logical(scale);
-    let hud_size_log: tauri::LogicalSize<f64> = hud.outer_size().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD size: {}", e))))?.to_logical(scale);
-
-    let window_size_log = tauri::LogicalSize::new(config.width, config.height);
-
-    let x_manual_points = match scale {
-        s if (s - 2.0).abs() < 0.01 => 0.0,   
-        s if (s - 1.0).abs() < 0.01 => -20.0, 
-        _ => -10.0, 
-    };
-
-    let gap_y_points = 20.0;
-    let target_x_log = hud_pos_log.x + (hud_size_log.width - window_size_log.width) / 2.0 + x_manual_points;
-    let target_y_log = hud_pos_log.y + hud_size_log.height + gap_y_points;
-
-    let target_x_phys_global = (target_x_log * scale).round() as i32 + mon_pos_phys.x;
-    let target_y_phys_global = (target_y_log * scale).round() as i32 + mon_pos_phys.y;
-
-    println!("🎯 {} Scale: {}, HUD logique: ({:.1}, {:.1}), {} logique: ({:.1}, {:.1})", window_name, scale, hud_pos_log.x, hud_pos_log.y, window_name, target_x_log, target_y_log);
-    println!("🎯 {} Position finale physique: {}=({}, {})", window_name, window_name, target_x_phys_global, target_y_phys_global);
-
-    window.set_position(tauri::PhysicalPosition::new(target_x_phys_global, target_y_phys_global)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set {} position: {}", window_name, e))))?;
 
     // Rendre visible
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
@@ -328,6 +427,10 @@ fn show_draggable_window(app: &AppHandle, window_name: &str, config: DraggableWi
 
     apply_current_stealth(app, &window)?;
     window.show()?;
+
+    // 🎯 NOUVEAU : Appliquer le layout automatique après avoir rendu visible
+    arrange_hud_children(app)?;
+    
     Ok(())
 }
 
@@ -372,8 +475,8 @@ fn dock_draggable_window(app: &AppHandle, window_name: &str, config: DraggableWi
                 let _: () = msg_send![window_win, setMovable: false];
             }
 
-            // Repositionner
-            let _ = show_draggable_window(app, window_name, config);
+            // Repositionner avec le layout manager
+            let _ = arrange_hud_children(app);
 
             // Émettre l'événement
             let _ = app.emit_to(window_name, &format!("{}:docked", window_name), serde_json::json!({}));
@@ -1014,6 +1117,9 @@ fn input_resize(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 
         // Repositionner pour garder le haut fixe (la fenêtre ne doit que s'étendre vers le bas)
         input.set_position(current_pos)?;
+
+        // Réorganiser le layout si la taille a changé
+        let _ = arrange_hud_children(&app);
 
         // Force redraw sur macOS pour éviter les artefacts visuels
         #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
