@@ -12,7 +12,49 @@ mod tests;
 
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WebviewWindow, Listener};
 use tracing::{info, warn, error, debug};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 // Note: Ces imports ne sont plus nécessaires depuis l'utilisation du module logging
+
+// 🎯 SYSTÈME DOCK/UNDOCK pour fenêtre Input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "mode")]
+pub enum DockState {
+    #[serde(rename = "docked")]
+    Docked {
+        anchor: String, // "below-center", "below-left", etc.
+        offset_x: f64,
+        offset_y: f64,
+    },
+    #[serde(rename = "undocked")]
+    Undocked,
+}
+
+#[derive(Debug)]
+pub struct InputWindowState {
+    pub dock_state: DockState,
+    pub free_positions: HashMap<String, (f64, f64)>, // monitor_id -> (x, y)
+    pub is_dragging: bool,
+    pub snap_zone_active: bool,
+}
+
+impl Default for InputWindowState {
+    fn default() -> Self {
+        Self {
+            dock_state: DockState::Docked {
+                anchor: "below-center".to_string(),
+                offset_x: 0.0,
+                offset_y: 20.0,
+            },
+            free_positions: HashMap::new(),
+            is_dragging: false,
+            snap_zone_active: false,
+        }
+    }
+}
+
+pub type InputState = Arc<Mutex<InputWindowState>>;
 
 
 fn capture_screen_internal() -> Result<String, String> {
