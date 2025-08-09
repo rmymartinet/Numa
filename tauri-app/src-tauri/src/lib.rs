@@ -726,11 +726,17 @@ fn ensure_input(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         "input",
         WebviewUrl::External("http://localhost:1420/#/input".parse().unwrap()),
     )
+    .on_page_load(move |window, _| {
+        println!("🔔 Input window page loaded: {}", window.label());
+        // Open DevTools automatically for debug
+        let _ = window.open_devtools();
+    })
+    // 🎯 DÉBUT EN MODE DOCKED : enfant du HUD
     .parent_raw(parent_ptr)                 // Child window du HUD
     .decorations(false)
     .transparent(true)
     .always_on_top(true)
-    .resizable(false)
+    .resizable(true)  // 🔑 Permettre le resize pour le contenu dynamique
     .minimizable(false)
     .closable(false)
     .skip_taskbar(true)
@@ -872,6 +878,165 @@ fn input_resize(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
 }
 
 #[tauri::command]
+fn input_undock(app: AppHandle) -> tauri::Result<()> {
+    if let Some(input) = app.get_webview_window("input") {
+        println!("🔓 Undocking InputPage - passage en mode libre");
+        
+        // Approche simple : juste détacher et permettre le drag
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = input.ns_window()? as *mut objc::runtime::Object;
+            
+            // Détacher complètement du parent si il y en a un
+            if let Some(hud) = app.get_webview_window("hud") {
+                if let Ok(hud_ptr) = hud.ns_window() {
+                    let hud_obj = hud_ptr as *mut objc::runtime::Object;
+                    let _: () = msg_send![hud_obj, removeChildWindow: win];
+                    println!("🔓 Removed from HUD parent");
+                }
+            }
+            
+            // Réinitialiser comme fenêtre indépendante
+            let _: () = msg_send![win, setParentWindow: std::ptr::null::<objc::runtime::Object>()];
+            let _: () = msg_send![win, setMovable: true];
+            let _: () = msg_send![win, orderFront: std::ptr::null::<objc::runtime::Object>()];
+            
+            println!("🔓 Window should now be movable");
+        }
+        
+        // Émettre l'événement pour le frontend
+        let _ = app.emit_to("input", "input:undocked", serde_json::json!({}));
+        println!("✅ InputPage undocked - test drag maintenant");
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_hud_position_and_size(app: AppHandle) -> tauri::Result<serde_json::Value> {
+    if let Some(hud) = app.get_webview_window("hud") {
+        let position = hud.outer_position()?;
+        let size = hud.outer_size()?;
+        
+        Ok(serde_json::json!({
+            "x": position.x,
+            "y": position.y,
+            "width": size.width,
+            "height": size.height
+        }))
+    } else {
+        Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "HUD window not found")))
+    }
+}
+
+#[tauri::command]
+fn check_snap_distance(app: AppHandle) -> tauri::Result<serde_json::Value> {
+    if let Some(input) = app.get_webview_window("input") {
+        if let Some(hud) = app.get_webview_window("hud") {
+            let input_pos = input.outer_position()?;
+            let input_size = input.outer_size()?;
+            let hud_pos = hud.outer_position()?;
+            let hud_size = hud.outer_size()?;
+            
+            // Calculer la distance entre les centres
+            let input_center_x = input_pos.x as f64 + (input_size.width as f64 / 2.0);
+            let input_center_y = input_pos.y as f64 + (input_size.height as f64 / 2.0);
+            let hud_center_x = hud_pos.x as f64 + (hud_size.width as f64 / 2.0);
+            let hud_center_y = hud_pos.y as f64 + (hud_size.height as f64 / 2.0);
+            
+            let distance = ((input_center_x - hud_center_x).powi(2) + (input_center_y - hud_center_y).powi(2)).sqrt();
+            let snap_threshold = 50.0; // 50 pixels
+            let is_in_snap_zone = distance <= snap_threshold;
+            
+            println!("🎯 Snap check: distance={:.1}px, threshold={:.1}px, should_snap={}", distance, snap_threshold, is_in_snap_zone);
+            
+            Ok(serde_json::json!({
+                "distance": distance,
+                "threshold": snap_threshold,
+                "should_snap": is_in_snap_zone,
+                "input_pos": { "x": input_pos.x, "y": input_pos.y },
+                "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
+            }))
+        } else {
+            Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "HUD window not found")))
+        }
+    } else {
+        Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "Input window not found")))
+    }
+}
+
+#[tauri::command]
+fn input_dock(app: AppHandle) -> tauri::Result<()> {
+    if let Some(input) = app.get_webview_window("input") {
+        if let Some(hud) = app.get_webview_window("hud") {
+            println!("🔒 Docking InputPage to HUD");
+            
+            #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+            unsafe {
+                use objc::{msg_send, sel, sel_impl};
+                let input_win = input.ns_window()? as *mut objc::runtime::Object;
+                let hud_win = hud.ns_window()? as *mut objc::runtime::Object;
+                
+                // Attacher comme enfant du HUD
+                let _: () = msg_send![hud_win, addChildWindow: input_win ordered: 1_i32]; // NSWindowAbove
+                let _: () = msg_send![input_win, setMovable: false];
+                
+                println!("🔒 InputPage docked to HUD");
+            }
+            
+            // Repositionner sous le HUD
+            let _ = input_show(app.clone());
+            
+            // Émettre l'événement
+            let _ = app.emit_to("input", "input:docked", serde_json::json!({}));
+            println!("✅ InputPage docked");
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn start_input_dragging(app: AppHandle) -> tauri::Result<()> {
+    if let Some(input) = app.get_webview_window("input") {
+        println!("🎯 start_input_dragging appelé");
+        
+        // Vérifier si c'est vraiment détaché avant d'essayer de drag
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = input.ns_window()? as *mut objc::runtime::Object;
+            
+            // Vérifier le parent
+            let parent: *mut objc::runtime::Object = msg_send![win, parentWindow];
+            if parent.is_null() {
+                println!("✅ Fenêtre sans parent - drag devrait fonctionner");
+            } else {
+                println!("❌ Fenêtre a encore un parent - problème");
+            }
+            
+            // Forcer movable encore une fois
+            let _: () = msg_send![win, setMovable: true];
+        }
+        
+        // Essayer le drag Tauri
+        match input.start_dragging() {
+            Ok(()) => println!("✅ start_dragging OK"),
+            Err(e) => println!("❌ start_dragging failed: {}", e),
+        }
+        
+        // Force redraw sur macOS
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = input.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, display];
+        }
+    }
+    Ok(())
+}
+
+
+#[tauri::command]
 fn toggle_stealth_cmd(app: AppHandle) -> Result<bool, String> {
     use validation::check_rate_limit;
 
@@ -995,6 +1160,11 @@ pub fn run() {
             input_show,
             input_hide,
             input_resize,
+            input_undock,
+            input_dock,
+            get_hud_position_and_size,
+            check_snap_distance,
+            start_input_dragging,
             start_chat,
             toggle_stealth_cmd,
             get_stealth_status,

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import InputField from '../components/HUDBar/InputField';
-import { Aperture } from 'lucide-react';
+import { Aperture, Unlink, Link } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -13,7 +13,12 @@ interface Message {
 const InputPage: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isDocked, setIsDocked] = useState(true);
+  const [isInSnapZone, setIsInSnapZone] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const snapCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Focus automatique
   useEffect(() => {
@@ -22,10 +27,10 @@ const InputPage: React.FC = () => {
     }
   }, []);
 
-  // Écoute des réponses
+  // Écoute des réponses et des états dock/undock
   useEffect(() => {
     const setupListeners = async () => {
-      const unlisten = await listen('chat:response', (event: any) => {
+      const unlisten1 = await listen('chat:response', (event: any) => {
         const assistantMessage: Message = {
           role: 'assistant',
           content: event.payload.message,
@@ -33,10 +38,32 @@ const InputPage: React.FC = () => {
         };
         setMessages(prev => [...prev, assistantMessage]);
       });
-      return unlisten;
+
+      const unlisten2 = await listen('input:docked', () => {
+        setIsDocked(true);
+      });
+
+      const unlisten3 = await listen('input:undocked', () => {
+        setIsDocked(false);
+      });
+
+      return () => {
+        unlisten1();
+        unlisten2();
+        unlisten3();
+      };
     };
 
     setupListeners();
+  }, []);
+
+  // Cleanup au démontage
+  useEffect(() => {
+    return () => {
+      if (snapCheckInterval.current) {
+        clearInterval(snapCheckInterval.current);
+      }
+    };
   }, []);
 
   // Redimensionnement simple
@@ -67,6 +94,98 @@ const InputPage: React.FC = () => {
     }
   };
 
+  // Vérification de la zone de snap
+  const checkSnapZone = async () => {
+    if (!isDragging || isDocked) return;
+    
+    try {
+      const snapData = await invoke('check_snap_distance');
+      const shouldSnap = (snapData as any).should_snap;
+      const wasInSnapZone = isInSnapZone;
+      
+      setIsInSnapZone(shouldSnap);
+      
+      // Émettre les événements de snap pour le HUD
+      if (shouldSnap && !wasInSnapZone) {
+        await emit('snap:enter', { 
+          inputPosition: (snapData as any).input_pos,
+          distance: (snapData as any).distance 
+        });
+        console.error('🎯 Entré dans zone de snap - halo activé');
+      } else if (!shouldSnap && wasInSnapZone) {
+        await emit('snap:exit', {});
+        console.error('🎯 Sorti de zone de snap - halo désactivé');
+      }
+    } catch (error) {
+      console.error('Erreur check snap:', error);
+    }
+  };
+
+  // Undock automatique lors du drag depuis l'état docked
+  const handleAutomaticUndock = async (clientX: number, clientY: number) => {
+    if (!isDocked || !dragStartPos.current) return;
+    
+    const distance = Math.sqrt(
+      Math.pow(clientX - dragStartPos.current.x, 2) + 
+      Math.pow(clientY - dragStartPos.current.y, 2)
+    );
+    
+    const undockThreshold = 10; // 10 pixels de movement
+    
+    if (distance > undockThreshold) {
+      console.log('🔓 Auto-undock triggered - distance:', distance);
+      await handleUndock();
+    }
+  };
+
+  // Fonctions dock/undock
+  const handleUndock = async () => {
+    try {
+      await invoke('input_undock');
+    } catch (error) {
+      console.error('Erreur undock:', error);
+    }
+  };
+
+  const handleDock = async () => {
+    try {
+      await invoke('input_dock');
+      setIsInSnapZone(false); // Reset snap zone
+    } catch (error) {
+      console.error('Erreur dock:', error);
+    }
+  };
+
+  // Gestion du drag
+  const handleDragStart = (clientX: number, clientY: number) => {
+    dragStartPos.current = { x: clientX, y: clientY };
+    setIsDragging(true);
+    
+    if (!isDocked) {
+      // Commencer la vérification de snap
+      snapCheckInterval.current = setInterval(checkSnapZone, 100);
+    }
+  };
+
+  const handleDragEnd = async () => {
+    setIsDragging(false);
+    dragStartPos.current = null;
+    
+    // Nettoyer l'intervalle
+    if (snapCheckInterval.current) {
+      clearInterval(snapCheckInterval.current);
+      snapCheckInterval.current = null;
+    }
+    
+    // Si dans la zone de snap, dock automatiquement
+    if (isInSnapZone && !isDocked) {
+      console.log('🔒 Auto-dock triggered par snap zone');
+      await handleDock();
+    }
+    
+    setIsInSnapZone(false);
+  };
+
   return (
     <div
       style={{
@@ -82,16 +201,63 @@ const InputPage: React.FC = () => {
         boxSizing: 'border-box',
       }}
     >
-      {/* 🎯 BARRE DRAGGABLE - Simple et efficace */}
+      {/* 🎯 BARRE DRAGGABLE avec bouton dock/undock */}
       <div
         style={{
-          WebkitAppRegion: 'drag',
-          height: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: '24px',
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          cursor: 'grab',
           borderRadius: '7px 7px 0 0',
-        } as React.CSSProperties}
-      />
+        }}
+      >
+        <div
+          style={{
+            WebkitAppRegion: isDocked ? 'no-drag' : 'drag',
+            flex: 1,
+            height: '100%',
+            cursor: isDocked ? (isDragging ? 'grabbing' : 'default') : (isDragging ? 'grabbing' : 'grab'),
+            backgroundColor: isDocked 
+              ? (isInSnapZone ? 'rgba(0, 255, 0, 0.1)' : 'transparent')
+              : (isInSnapZone ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 255, 255, 0.05)'),
+          } as React.CSSProperties}
+          onMouseDown={(e) => {
+            console.error('🎯 Barre MouseDown - isDocked:', isDocked, 'clientX:', e.clientX, 'clientY:', e.clientY);
+            handleDragStart(e.clientX, e.clientY);
+            
+            if (isDocked) {
+              // Auto-undock si on drag depuis l'état docked
+              const checkUndock = (moveEvent: any) => {
+                handleAutomaticUndock(moveEvent.clientX, moveEvent.clientY);
+                document.removeEventListener('mousemove', checkUndock);
+              };
+              document.addEventListener('mousemove', checkUndock, { once: true });
+            } else {
+              console.error('🔄 Tentative start_input_dragging...');
+              invoke('start_input_dragging').catch(console.error);
+            }
+          }}
+          onMouseUp={handleDragEnd}
+        />
+        <button
+          onClick={isDocked ? handleUndock : handleDock}
+          style={{
+            WebkitAppRegion: 'no-drag',
+            background: 'none',
+            border: 'none',
+            color: 'rgba(255, 255, 255, 0.7)',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            transition: 'color 0.2s',
+          } as React.CSSProperties}
+          title={isDocked ? 'Détacher' : 'Attacher au HUD'}
+        >
+          {isDocked ? <Unlink size={12} /> : <Link size={12} />}
+        </button>
+      </div>
 
       {/* INPUT ZONE */}
       <div

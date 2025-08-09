@@ -11,6 +11,7 @@ import MetricsDashboard from '../components/MetricsDashboard';
 import { useAlerts } from '../utils/alerts';
 import AlertsPanel from '../components/AlertsPanel';
 import HUDBar from '../components/HUDBar';
+import { useSnapHalo } from '../hooks/useSnapHalo';
 
 import './MainHUDPage.css';
 
@@ -40,6 +41,7 @@ const MainHUDPage: React.FC = () => {
   const { alerts } = useAlerts();
   const [showMetricsDashboard, setShowMetricsDashboard] = useState(false);
   const [showAlertsPanel, setShowAlertsPanel] = useState(false);
+  const snapHalo = useSnapHalo();
 
   // Gestion des onglets
   const handleTabChange = (tab: TabType) => {
@@ -288,7 +290,18 @@ const MainHUDPage: React.FC = () => {
       }}
     >
       {/* HUD Bar - toujours visible */}
-      <div style={{ pointerEvents: 'auto' }} data-hud-bar>
+      <div 
+        style={{ 
+          pointerEvents: 'auto',
+          position: 'relative',
+          transition: 'all 0.2s ease',
+          boxShadow: snapHalo.isVisible 
+            ? '0 0 20px 5px rgba(0, 255, 0, 0.4), 0 0 40px 10px rgba(0, 255, 0, 0.2)' 
+            : 'none',
+          borderRadius: snapHalo.isVisible ? '10px' : '0px',
+        }} 
+        data-hud-bar
+      >
         <HUDBar
           isListening={isListening}
           inputText={inputText}
