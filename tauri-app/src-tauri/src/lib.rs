@@ -91,6 +91,29 @@ fn close_all_windows(app: AppHandle) -> tauri::Result<()> {
 fn start_window_dragging(app: AppHandle) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window("hud") {
         window.start_dragging()?;
+        
+        // 🔧 Fix macOS ghosting: Force window redraw after drag to eliminate ghost images
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = window.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, display]; // Force immediate redraw
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn force_hud_redraw(app: AppHandle) -> tauri::Result<()> {
+    if let Some(window) = app.get_webview_window("hud") {
+        // 🔧 Force complete window redraw to eliminate ghost images on macOS
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = window.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, display]; // Force immediate redraw
+            let _: () = msg_send![win, setViewsNeedDisplay: true]; // Mark all views as needing redraw
+        }
     }
     Ok(())
 }
@@ -659,6 +682,7 @@ pub fn run() {
             get_image_as_base64,
             close_all_windows,
             start_window_dragging,
+            force_hud_redraw,
             resize_window,
             panel_show,
             panel_hide,

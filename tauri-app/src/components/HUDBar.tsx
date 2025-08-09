@@ -52,7 +52,7 @@ const HUDBar: React.FC<HUDBarProps> = ({
   // 🔧 Fonctions de debug temporaires
   const handleDebugPositions = async () => {
     try {
-      const result = await invoke('debug_get_positions') as string;
+      const result = (await invoke('debug_get_positions')) as string;
       console.log('🔍 Debug positions:', result);
       alert(result);
     } catch (error) {
@@ -62,11 +62,21 @@ const HUDBar: React.FC<HUDBarProps> = ({
 
   const handleForceReposition = async () => {
     try {
-      const result = await invoke('debug_force_reposition') as string;
+      const result = (await invoke('debug_force_reposition')) as string;
       console.log('🔧 Force reposition:', result);
       alert(result);
     } catch (error) {
       console.error('Erreur force reposition:', error);
+    }
+  };
+
+  // 🔧 Fonction pour forcer le redraw du HUD (fix ghosting)
+  const handleForceRedraw = async () => {
+    try {
+      await invoke('force_hud_redraw');
+      console.log('🔧 HUD redraw forcé');
+    } catch (error) {
+      console.error('Erreur force redraw:', error);
     }
   };
 
@@ -81,6 +91,14 @@ const HUDBar: React.FC<HUDBarProps> = ({
     >
       <CaptureButton isListening={isListening} onCapture={onCapture} />
 
+      <GlassButton>
+        <span className="text-sm">Context</span>
+      </GlassButton>
+
+      <GlassButton>
+        <span className="text-sm">Ask</span>
+      </GlassButton>
+      {/*
       <InputField
         ref={inputRef}
         value={inputText}
@@ -94,7 +112,7 @@ const HUDBar: React.FC<HUDBarProps> = ({
             console.error('Error starting chat:', error);
           }
         }}
-      />
+      /> */}
 
       <div
         style={{
@@ -124,6 +142,13 @@ const HUDBar: React.FC<HUDBarProps> = ({
         title="Debug: Forcer le repositionnement du panel"
       >
         🔧
+      </GlassButton>
+
+      <GlassButton
+        onClick={handleForceRedraw}
+        title="Fix: Éliminer l'effet ghosting/double image"
+      >
+        🎨
       </GlassButton>
     </GlassContainer>
   );

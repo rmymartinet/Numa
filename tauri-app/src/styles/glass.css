@@ -67,3 +67,20 @@
   will-change: transform, filter;
   overflow: hidden;
 }
+
+/* Fix macOS ghosting/double image bug on click */
+.glass:active,
+.glass:focus,
+.glass:focus-within {
+  transform: translateZ(0) scale(1.0001);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Force repaint to eliminate ghost images */
+  animation: forceRedraw 0.01s ease-out;
+}
+
+@keyframes forceRedraw {
+  0% { opacity: 0.9999; }
+  100% { opacity: 1; }
+}
