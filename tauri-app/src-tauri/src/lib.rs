@@ -945,7 +945,7 @@ fn check_snap_distance(app: AppHandle) -> tauri::Result<serde_json::Value> {
             let hud_center_y = hud_pos.y as f64 + (hud_size.height as f64 / 2.0);
             
             let distance = ((input_center_x - hud_center_x).powi(2) + (input_center_y - hud_center_y).powi(2)).sqrt();
-            let snap_threshold = 50.0; // 50 pixels
+            let snap_threshold = 200.0; // 200 pixels (plus facile à tester)
             let is_in_snap_zone = distance <= snap_threshold;
             
             println!("🎯 Snap check: distance={:.1}px, threshold={:.1}px, should_snap={}", distance, snap_threshold, is_in_snap_zone);

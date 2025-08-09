@@ -94,14 +94,18 @@ const InputPage: React.FC = () => {
     }
   };
 
-  // Vérification de la zone de snap
+  // Vérification de la zone de snap  
   const checkSnapZone = async () => {
-    if (!isDragging || isDocked) return;
+    // On vérifie si on est undocké, peu importe l'état isDragging car il peut être en retard
+    if (isDocked) return;
     
     try {
       const snapData = await invoke('check_snap_distance');
       const shouldSnap = (snapData as any).should_snap;
+      const distance = (snapData as any).distance;
       const wasInSnapZone = isInSnapZone;
+      
+      console.error('🔍 checkSnapZone - isDocked:', isDocked, 'shouldSnap:', shouldSnap, 'distance:', distance?.toFixed(1) + 'px');
       
       setIsInSnapZone(shouldSnap);
       
@@ -109,7 +113,7 @@ const InputPage: React.FC = () => {
       if (shouldSnap && !wasInSnapZone) {
         await emit('snap:enter', { 
           inputPosition: (snapData as any).input_pos,
-          distance: (snapData as any).distance 
+          distance: distance 
         });
         console.error('🎯 Entré dans zone de snap - halo activé');
       } else if (!shouldSnap && wasInSnapZone) {
@@ -121,22 +125,6 @@ const InputPage: React.FC = () => {
     }
   };
 
-  // Undock automatique lors du drag depuis l'état docked
-  const handleAutomaticUndock = async (clientX: number, clientY: number) => {
-    if (!isDocked || !dragStartPos.current) return;
-    
-    const distance = Math.sqrt(
-      Math.pow(clientX - dragStartPos.current.x, 2) + 
-      Math.pow(clientY - dragStartPos.current.y, 2)
-    );
-    
-    const undockThreshold = 10; // 10 pixels de movement
-    
-    if (distance > undockThreshold) {
-      console.log('🔓 Auto-undock triggered - distance:', distance);
-      await handleUndock();
-    }
-  };
 
   // Fonctions dock/undock
   const handleUndock = async () => {
@@ -160,9 +148,13 @@ const InputPage: React.FC = () => {
   const handleDragStart = (clientX: number, clientY: number) => {
     dragStartPos.current = { x: clientX, y: clientY };
     setIsDragging(true);
-    
-    if (!isDocked) {
-      // Commencer la vérification de snap
+    console.error('🎯 handleDragStart - isDocked:', isDocked);
+  };
+
+  // Démarre la vérification de snap après undock
+  const startSnapChecking = () => {
+    if (!snapCheckInterval.current) {
+      console.error('🎯 Démarrage vérification snap (interval 100ms)');
       snapCheckInterval.current = setInterval(checkSnapZone, 100);
     }
   };
@@ -227,36 +219,124 @@ const InputPage: React.FC = () => {
             handleDragStart(e.clientX, e.clientY);
             
             if (isDocked) {
-              // Auto-undock si on drag depuis l'état docked
-              const checkUndock = (moveEvent: any) => {
-                handleAutomaticUndock(moveEvent.clientX, moveEvent.clientY);
-                document.removeEventListener('mousemove', checkUndock);
+              // Auto-undock au premier mouvement de la souris
+              const autoUndockOnMove = (moveEvent: any) => {
+                const distance = Math.sqrt(
+                  Math.pow(moveEvent.clientX - e.clientX, 2) + 
+                  Math.pow(moveEvent.clientY - e.clientY, 2)
+                );
+                
+                if (distance > 3) { // Seuil très bas pour undock immédiat
+                  console.error('🔓 Auto-undock: distance=' + distance + 'px');
+                  handleUndock().then(() => {
+                    // Une fois undocké, commencer le drag ET la vérification de snap
+                    setTimeout(() => {
+                      invoke('start_input_dragging').catch(console.error);
+                      startSnapChecking(); // 🎯 IMPORTANT: Commencer la vérification
+                    }, 50); // Plus de temps pour que l'undock soit bien fini
+                  });
+                  
+                  // Nettoyer les listeners
+                  document.removeEventListener('mousemove', autoUndockOnMove);
+                  document.removeEventListener('mouseup', cancelAutoUndock);
+                }
               };
-              document.addEventListener('mousemove', checkUndock, { once: true });
+              
+              const cancelAutoUndock = () => {
+                document.removeEventListener('mousemove', autoUndockOnMove);
+                document.removeEventListener('mouseup', cancelAutoUndock);
+              };
+              
+              document.addEventListener('mousemove', autoUndockOnMove);
+              document.addEventListener('mouseup', cancelAutoUndock);
             } else {
+              // Déjà undocké, commencer le drag ET la vérification immédiatement
               console.error('🔄 Tentative start_input_dragging...');
               invoke('start_input_dragging').catch(console.error);
+              startSnapChecking(); // 🎯 IMPORTANT: Aussi pour les drags depuis undocked
             }
           }}
           onMouseUp={handleDragEnd}
         />
-        <button
-          onClick={isDocked ? handleUndock : handleDock}
-          style={{
-            WebkitAppRegion: 'no-drag',
-            background: 'none',
-            border: 'none',
-            color: 'rgba(255, 255, 255, 0.7)',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            transition: 'color 0.2s',
-          } as React.CSSProperties}
-          title={isDocked ? 'Détacher' : 'Attacher au HUD'}
-        >
-          {isDocked ? <Unlink size={12} /> : <Link size={12} />}
-        </button>
+        {/* Boutons de debug */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            onClick={() => {
+              console.error('🧪 Test checkSnapZone forcé');
+              checkSnapZone();
+            }}
+            style={{
+              WebkitAppRegion: 'no-drag',
+              background: 'rgba(255, 0, 0, 0.3)',
+              border: '1px solid rgba(255, 0, 0, 0.5)',
+              color: 'white',
+              cursor: 'pointer',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontSize: '10px',
+            } as React.CSSProperties}
+          >
+            Test Snap
+          </button>
+          
+          <button
+            onClick={() => {
+              console.error('🧪 Test startSnapChecking forcé');
+              startSnapChecking();
+            }}
+            style={{
+              WebkitAppRegion: 'no-drag',
+              background: 'rgba(0, 255, 0, 0.3)',
+              border: '1px solid rgba(0, 255, 0, 0.5)',
+              color: 'white',
+              cursor: 'pointer',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontSize: '10px',
+            } as React.CSSProperties}
+          >
+            Start Check
+          </button>
+          
+          <button
+            onClick={() => {
+              console.error('🧪 État actuel - isDocked:', isDocked, 'isDragging:', isDragging, 'isInSnapZone:', isInSnapZone);
+            }}
+            style={{
+              WebkitAppRegion: 'no-drag',
+              background: 'rgba(0, 0, 255, 0.3)',
+              border: '1px solid rgba(0, 0, 255, 0.5)',
+              color: 'white',
+              cursor: 'pointer',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontSize: '10px',
+            } as React.CSSProperties}
+          >
+            État
+          </button>
+        </div>
+        
+        {/* Bouton de backup */}
+        {false && (
+          <button
+            onClick={isDocked ? handleUndock : handleDock}
+            style={{
+              WebkitAppRegion: 'no-drag',
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255, 255, 255, 0.7)',
+              cursor: 'pointer',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              transition: 'color 0.2s',
+            } as React.CSSProperties}
+            title={isDocked ? 'Détacher' : 'Attacher au HUD'}
+          >
+            {isDocked ? <Unlink size={12} /> : <Link size={12} />}
+          </button>
+        )}
       </div>
 
       {/* INPUT ZONE */}

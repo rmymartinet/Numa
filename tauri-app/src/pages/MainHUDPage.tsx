@@ -295,13 +295,37 @@ const MainHUDPage: React.FC = () => {
           pointerEvents: 'auto',
           position: 'relative',
           transition: 'all 0.2s ease',
-          boxShadow: snapHalo.isVisible 
-            ? '0 0 20px 5px rgba(0, 255, 0, 0.4), 0 0 40px 10px rgba(0, 255, 0, 0.2)' 
-            : 'none',
-          borderRadius: snapHalo.isVisible ? '10px' : '0px',
         }} 
         data-hud-bar
       >
+        {/* Halo de snap - zone de reattachement */}
+        {snapHalo.isVisible && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%', // Juste en dessous du HUD
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '700px', // Même largeur que InputPage
+              height: '120px', // Hauteur approximative de InputPage 
+              border: '3px solid rgba(255, 0, 0, 0.8)',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(255, 0, 0, 0.1)',
+              marginTop: '20px', // Gap habituel entre HUD et Input
+              boxShadow: '0 0 15px rgba(255, 0, 0, 0.5)',
+              animation: 'pulse 1s ease-in-out infinite alternate',
+              zIndex: 1000,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+        {/* Animation CSS inline */}
+        <style>{`
+          @keyframes pulse {
+            0% { opacity: 0.7; transform: translateX(-50%) scale(1); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1.02); }
+          }
+        `}</style>
         <HUDBar
           isListening={isListening}
           inputText={inputText}
