@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { Brain } from 'lucide-react';
@@ -89,7 +89,8 @@ const ContextPage: React.FC = () => {
     // pas d'activation dragActiveRef ici : on attend de dépasser le seuil si docké
   };
 
-  const handleDragEnd = async () => {
+  const handleDragEnd = useCallback(async () => {
+    console.error('🎯 handleDragEnd appelé');
     setIsDragging(false);
     dragStartPos.current = null;
     dragActiveRef.current = false;
@@ -101,10 +102,29 @@ const ContextPage: React.FC = () => {
 
     // auto-dock si on est dans la zone
     if (isInSnapZone && !isDocked) {
+      console.error('🎯 Auto-docking...');
       await handleDock();
     }
     setIsInSnapZone(false);
-  };
+  }, [isInSnapZone, isDocked]);
+
+  // Listener global pour capturer mouseup pendant le drag natif
+  useEffect(() => {
+    const globalMouseUp = () => {
+      if (dragActiveRef.current) {
+        console.error('🎯 Global mouseup detected during drag');
+        handleDragEnd();
+      }
+    };
+
+    document.addEventListener('mouseup', globalMouseUp);
+    window.addEventListener('mouseup', globalMouseUp);
+
+    return () => {
+      document.removeEventListener('mouseup', globalMouseUp);
+      window.removeEventListener('mouseup', globalMouseUp);
+    };
+  }, [isInSnapZone, isDocked, handleDragEnd]); // Dependencies pour que handleDragEnd ait les bonnes valeurs
 
   // --- RENDER ---------------------------------------------------------------
 
@@ -213,8 +233,7 @@ const ContextPage: React.FC = () => {
           }}
           onMouseUp={handleDragEnd}
           onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ')
-              handleDragStart(e.clientX, e.clientY);
+            if (e.key === 'Enter' || e.key === ' ') handleDragStart(0, 0);
           }}
         />
         {/* Boutons debug */}

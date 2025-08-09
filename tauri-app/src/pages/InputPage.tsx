@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import InputField from '../components/HUDBar/InputField';
@@ -142,7 +142,8 @@ const InputPage: React.FC = () => {
     // pas d'activation dragActiveRef ici : on attend de dépasser le seuil si docké
   };
 
-  const handleDragEnd = async () => {
+  const handleDragEnd = useCallback(async () => {
+    console.error('🎯 InputPage handleDragEnd appelé');
     setIsDragging(false);
     dragStartPos.current = null;
     dragActiveRef.current = false;
@@ -154,10 +155,29 @@ const InputPage: React.FC = () => {
 
     // auto-dock si on est dans la zone
     if (isInSnapZone && !isDocked) {
+      console.error('🎯 InputPage Auto-docking...');
       await handleDock();
     }
     setIsInSnapZone(false);
-  };
+  }, [isInSnapZone, isDocked]);
+
+  // Listener global pour capturer mouseup pendant le drag natif
+  useEffect(() => {
+    const globalMouseUp = () => {
+      if (dragActiveRef.current) {
+        console.error('🎯 InputPage Global mouseup detected during drag');
+        handleDragEnd();
+      }
+    };
+
+    document.addEventListener('mouseup', globalMouseUp);
+    window.addEventListener('mouseup', globalMouseUp);
+
+    return () => {
+      document.removeEventListener('mouseup', globalMouseUp);
+      window.removeEventListener('mouseup', globalMouseUp);
+    };
+  }, [handleDragEnd]);
 
   // --- RENDER ---------------------------------------------------------------
 
@@ -266,8 +286,7 @@ const InputPage: React.FC = () => {
           }}
           onMouseUp={handleDragEnd}
           onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ')
-              handleDragStart(e.clientX, e.clientY);
+            if (e.key === 'Enter' || e.key === ' ') handleDragStart(0, 0);
           }}
         />
         {/* Boutons debug (no-drag) */}
