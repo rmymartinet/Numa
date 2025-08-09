@@ -7,6 +7,8 @@ import CloseButton from './HUDBar/CloseButton';
 import GlassContainer from './ui/GlassContainer';
 import GlassButton from './ui/GlassButton';
 import '../styles/glass.css';
+import { SlidersHorizontal } from 'lucide-react';
+import VibrantGlass from './VibrantGlass';
 
 interface HUDBarProps {
   isListening: boolean;
@@ -49,27 +51,6 @@ const HUDBar: React.FC<HUDBarProps> = ({
     }
   };
 
-  // 🔧 Fonctions de debug temporaires
-  const handleDebugPositions = async () => {
-    try {
-      const result = (await invoke('debug_get_positions')) as string;
-      console.log('🔍 Debug positions:', result);
-      alert(result);
-    } catch (error) {
-      console.error('Erreur debug positions:', error);
-    }
-  };
-
-  const handleForceReposition = async () => {
-    try {
-      const result = (await invoke('debug_force_reposition')) as string;
-      console.log('🔧 Force reposition:', result);
-      alert(result);
-    } catch (error) {
-      console.error('Erreur force reposition:', error);
-    }
-  };
-
   // 💬 Fonction pour afficher l'InputPage (ferme le panel si ouvert)
   const handleAskClick = async () => {
     try {
@@ -88,54 +69,51 @@ const HUDBar: React.FC<HUDBarProps> = ({
   };
 
   return (
-    <GlassContainer
-      // variant="pill"
-      className="min-w-[400px] max-w-[1000px] cursor-grab select-none z-[1000]"
-      style={{
-        pointerEvents: 'auto',
-      }}
-      onMouseDown={handleMouseDown}
-    >
-      <CaptureButton isListening={isListening} onCapture={onCapture} />
-
-      <GlassButton>
-        <span className="text-sm">Context</span>
-      </GlassButton>
-
-      <GlassButton onClick={handleAskClick}>
-        <span className="text-sm">Ask</span>
-      </GlassButton>
-
-      <div
+    <>
+      <GlassContainer
+        onMouseDown={handleMouseDown}
+        // variant="pill"
+        className="min-w-[400px] max-w-[1000px] cursor-grab select-none z-[1000]"
         style={{
-          width: '1px',
-          height: '24px',
-          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          pointerEvents: 'auto',
         }}
-      />
-
-      <TogglePanelButton
-        isExpanded={isPanelExpanded}
-        onToggle={onTogglePanel}
-      />
-
-      <CloseButton onClose={onClose} />
-
-      {/* 🔧 Boutons de debug temporaires */}
-      <GlassButton
-        onClick={handleDebugPositions}
-        title="Debug: Afficher positions actuelles"
+        // onMouseDown={handleMouseDown}
       >
-        📍
-      </GlassButton>
+        <CaptureButton isListening={isListening} onCapture={onCapture} />
 
-      <GlassButton
-        onClick={handleForceReposition}
-        title="Debug: Forcer le repositionnement du panel"
-      >
-        🔧
-      </GlassButton>
-    </GlassContainer>
+        <GlassButton>
+          <span className="text-sm">Context</span>
+        </GlassButton>
+
+        <GlassButton onClick={handleAskClick}>
+          <span className="text-sm">Ask</span>
+        </GlassButton>
+
+        <div
+          style={{
+            width: '1px',
+            height: '24px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          }}
+        />
+
+        <TogglePanelButton
+          isExpanded={isPanelExpanded}
+          onToggle={onTogglePanel}
+        />
+      </GlassContainer>
+
+      {/* <GlassContainer>
+        <GlassButton
+          onClick={handleForceReposition}
+          title="Debug: Forcer le repositionnement du panel"
+        >
+          <SlidersHorizontal />
+        </GlassButton>
+
+        <CloseButton onClose={onClose} />
+      </GlassContainer> */}
+    </>
   );
 };
 

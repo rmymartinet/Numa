@@ -27,7 +27,7 @@ const ResponsePage: React.FC = () => {
 
   // Listen for chat events from the HUD
   useEffect(() => {
-    let unlistenFns: Array<() => void> = [];
+    const unlistenFns: Array<() => void> = [];
 
     (async () => {
       console.log('🔔 ResponsePage: Setting up event listeners...');
@@ -186,7 +186,7 @@ N'hésitez pas à me poser d'autres questions pour voir l'effet en action.`;
           <span
             style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)' }}
           >
-            {isStreaming ? 'Streaming…' : 'Ready'}
+            {isStreaming ? 'Loading...' : 'Ready'}
           </span>
         </div>
       </div>

@@ -21,7 +21,7 @@ const GlassButton: React.FC<GlassButtonProps> = ({
 }) => {
   return (
     <button
-      // className={`glass__btn ${isActive ? 'is-on' : ''} ${className}`}
+      className={`glass__btn ${isActive ? 'is-on' : ''} ${className}`}
       onClick={onClick}
       disabled={disabled}
       title={title}

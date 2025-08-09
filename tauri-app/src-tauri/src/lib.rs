@@ -627,30 +627,18 @@ fn response_show_below_input(app: &AppHandle) -> tauri::Result<()> {
 fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
     println!("🚀 start_chat called with message: {}", message);
 
-    // 1) Affiche la fenêtre réponse EN DESSOUS de l'InputPage
-    response_show_below_input(&app)?;
-    println!("🚀 Response window shown below InputPage");
+    // 🎯 NOUVEAU : Ne plus afficher ResponsePage, l'InputPage gère tout maintenant
+    println!("🚀 Envoi direct vers InputPage (pas de ResponsePage)");
 
-    // 2) Attends le "response:ready" envoyé par la webview, puis émet "chat:start"
-    let app_for_start = app.clone();
-    let msg_for_start = message.clone();
-    let mut chat_started = std::sync::Mutex::new(false);
-    app_for_start.clone().listen("response:ready", move |_| {
-        let mut started = chat_started.lock().unwrap();
-        if !*started {
-            *started = true;
-            println!("✅ response:ready received — emitting chat:start");
-            let _ = app_for_start.emit_to(
-                "response",
-                "chat:start",
-                serde_json::json!({ "message": msg_for_start }),
-            );
-        } else {
-            println!("⚠️ response:ready received again, ignoring");
-        }
-    });
+    // 🎯 NOUVEAU : Envoi direct vers InputPage (pas besoin d'attendre response:ready)
+    println!("✅ Émission chat:start vers InputPage");
+    let _ = app.emit_to(
+        "input",
+        "chat:start", 
+        serde_json::json!({ "message": message.clone() }),
+    );
 
-    // 3) Chat OpenAI en async, et on **cible** la fenêtre "response"
+    // 🎯 NOUVEAU : Chat OpenAI en async, et on **cible** la fenêtre "input"
     let app_clone = app.clone();
     tauri::async_runtime::spawn(async move {
         match openai::chat_with_openai(openai::ChatRequest {
@@ -660,8 +648,8 @@ fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
         }).await {
             Ok(chat_response) => {
                 println!("🤖 OpenAI response: {}", chat_response.message);
-                println!("🚀 Emitting chat:response to response window");
-                let _ = app_clone.emit_to("response", "chat:response", serde_json::json!({
+                println!("🚀 Emitting chat:response to input window");
+                let _ = app_clone.emit_to("input", "chat:response", serde_json::json!({
                     "message": chat_response.message,
                     "conversation_id": chat_response.conversation_id,
                     "tokens_used": chat_response.tokens_used,
@@ -671,7 +659,7 @@ fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
             }
             Err(e) => {
                 println!("❌ OpenAI error: {}", e);
-                let _ = app_clone.emit_to("response", "chat:error", serde_json::json!({
+                let _ = app_clone.emit_to("input", "chat:error", serde_json::json!({
                     "error": e.to_string(),
                 }));
             }
@@ -780,6 +768,7 @@ fn input_show(app: AppHandle) -> tauri::Result<()> {
 
     println!("🎯 InputPage Scale: {}, HUD logique: ({:.1}, {:.1}), Input logique: ({:.1}, {:.1})", scale, hud_pos_log.x, hud_pos_log.y, target_x_log, target_y_log);
     println!("🎯 InputPage Position finale physique: Input=({}, {})", input_x, input_y);
+    println!("🎯 InputPage show() appelé - la fenêtre devrait être visible maintenant");
 
     // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition
     input.set_position(tauri::PhysicalPosition::new(input_x, input_y)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set input position: {}", e))))?;
@@ -812,6 +801,30 @@ fn input_hide(app: AppHandle) -> tauri::Result<()> {
         }
 
         apply_current_stealth(&app, &input)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn input_resize(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
+    if let Some(input) = app.get_webview_window("input") {
+        // 🎯 AGRANDISSEMENT VERS LE BAS : Garder la position Y fixe
+        let current_pos = input.outer_position()?;
+        let new_size = tauri::LogicalSize::new(width, height);
+        
+        // Redimensionner la fenêtre
+        input.set_size(new_size)?;
+        
+        // Repositionner pour garder le haut fixe (la fenêtre ne doit que s'étendre vers le bas)
+        input.set_position(current_pos)?;
+        
+        // Force redraw sur macOS pour éviter les artefacts visuels
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = input.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, display];
+        }
     }
     Ok(())
 }
@@ -939,6 +952,7 @@ pub fn run() {
             test_response_window,
             input_show,
             input_hide,
+            input_resize,
             start_chat,
             toggle_stealth_cmd,
             get_stealth_status,

@@ -25,21 +25,34 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
           className="glass__btn"
           style={{
             width: '100%',
-            padding: '3px 3px',
+            maxWidth: '600px',
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
             border: 'none',
-            borderRadius: '25px',
+            borderRadius: '3px',
             color: 'white',
+            padding: '3px 0px',
             fontSize: '14px',
             outline: 'none',
             transition: 'all 0.2s ease',
           }}
-          onKeyPress={e => {
-            if (e.key === 'Enter' && value.trim()) {
-              console.log('Chat message envoyé:', value);
-              console.log('onChatSubmit:', onChatSubmit);
+          onKeyDown={e => {
+            // ✅ ENTER: Envoyer le message
+            if (e.key === 'Enter' && !e.shiftKey && value.trim()) {
+              e.preventDefault();
               onChatSubmit?.(value.trim());
               onChange('');
+
+              // 🎯 AUTO-FOCUS: Garder le focus après envoi
+              setTimeout(() => {
+                if (ref && 'current' in ref && ref.current) {
+                  ref.current.focus();
+                }
+              }, 50);
+            }
+            // ✅ SHIFT+ENTER: Nouvelle ligne (préparé pour textarea)
+            else if (e.key === 'Enter' && e.shiftKey) {
+              // Laisse le comportement par défaut pour nouvelle ligne
+              // (nécessaire si on passe à textarea plus tard)
             }
           }}
         />
