@@ -86,7 +86,7 @@ const InputPage: React.FC = () => {
       };
       setMessages(prev => [...prev, userMessage]);
       setInputText('');
-      
+
       await resizeWindow(messages.length + 1);
       await invoke('start_chat', { message });
     } catch (error) {
@@ -94,38 +94,31 @@ const InputPage: React.FC = () => {
     }
   };
 
-  // Vérification de la zone de snap  
+  const dragActiveRef = useRef(false);
+
   const checkSnapZone = async () => {
-    // On vérifie si on est undocké, peu importe l'état isDragging car il peut être en retard
-    if (isDocked) return;
-    
+    //force sert a forcer la vérification même si docké
+
+    if (!dragActiveRef.current) return;
     try {
-      const snapData = await invoke('check_snap_distance');
-      const shouldSnap = (snapData as any).should_snap;
-      const distance = (snapData as any).distance;
-      const wasInSnapZone = isInSnapZone;
-      
-      console.error('🔍 checkSnapZone - isDocked:', isDocked, 'shouldSnap:', shouldSnap, 'distance:', distance?.toFixed(1) + 'px');
-      
+      const snapData: any = await invoke('check_snap_distance');
+
+      // Si on est dans la zone de snap, on met à jour l'état
+      //les !! permettent de forcer le type boolean
+      const shouldSnap = !!snapData.should_snap;
+
+      //was permet de savoir si on était déjà dans la zone de snap
+      const was = isInSnapZone;
       setIsInSnapZone(shouldSnap);
-      
-      // Émettre les événements de snap pour le HUD
-      if (shouldSnap && !wasInSnapZone) {
-        await emit('snap:enter', { 
-          inputPosition: (snapData as any).input_pos,
-          distance: distance 
-        });
-        console.error('🎯 Entré dans zone de snap - halo activé');
-      } else if (!shouldSnap && wasInSnapZone) {
-        await emit('snap:exit', {});
-        console.error('🎯 Sorti de zone de snap - halo désactivé');
-      }
-    } catch (error) {
-      console.error('Erreur check snap:', error);
+
+      //Si on est dans la zone de snap, on émet un événement
+      if (shouldSnap && !was) {
+        await emit('snap:enter', { distance: snapData.distance });
+      } else if (!shouldSnap && was) await emit('snap:exit', {});
+    } catch (e) {
+      console.error('Erreur check snap:', e);
     }
   };
-
-
   // Fonctions dock/undock
   const handleUndock = async () => {
     try {
@@ -153,28 +146,26 @@ const InputPage: React.FC = () => {
 
   // Démarre la vérification de snap après undock
   const startSnapChecking = () => {
-    if (!snapCheckInterval.current) {
-      console.error('🎯 Démarrage vérification snap (interval 100ms)');
-      snapCheckInterval.current = setInterval(checkSnapZone, 100);
-    }
+    if (snapCheckInterval.current) clearInterval(snapCheckInterval.current);
+    snapCheckInterval.current = setInterval(() => checkSnapZone(), 100);
   };
 
   const handleDragEnd = async () => {
     setIsDragging(false);
     dragStartPos.current = null;
-    
+    dragActiveRef.current = false;
+
     // Nettoyer l'intervalle
     if (snapCheckInterval.current) {
       clearInterval(snapCheckInterval.current);
       snapCheckInterval.current = null;
     }
-    
+
     // Si dans la zone de snap, dock automatiquement
     if (isInSnapZone && !isDocked) {
-      console.log('🔒 Auto-dock triggered par snap zone');
       await handleDock();
     }
-    
+
     setIsInSnapZone(false);
   };
 
@@ -205,58 +196,89 @@ const InputPage: React.FC = () => {
         }}
       >
         <div
-          style={{
-            WebkitAppRegion: isDocked ? 'no-drag' : 'drag',
-            flex: 1,
-            height: '100%',
-            cursor: isDocked ? (isDragging ? 'grabbing' : 'default') : (isDragging ? 'grabbing' : 'grab'),
-            backgroundColor: isDocked 
-              ? (isInSnapZone ? 'rgba(0, 255, 0, 0.1)' : 'transparent')
-              : (isInSnapZone ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 255, 255, 0.05)'),
-          } as React.CSSProperties}
-          onMouseDown={(e) => {
-            console.error('🎯 Barre MouseDown - isDocked:', isDocked, 'clientX:', e.clientX, 'clientY:', e.clientY);
+          role="button"
+          tabIndex={0}
+          aria-label="Draggable bar"
+          style={
+            {
+              WebkitAppRegion: isDocked ? 'no-drag' : 'drag',
+              flex: 1,
+              height: '100%',
+              cursor: isDocked
+                ? isDragging
+                  ? 'grabbing'
+                  : 'default'
+                : isDragging
+                  ? 'grabbing'
+                  : 'grab',
+              backgroundColor: isDocked
+                ? isInSnapZone
+                  ? 'rgba(0, 255, 0, 0.1)'
+                  : 'transparent'
+                : isInSnapZone
+                  ? 'rgba(0, 255, 0, 0.1)'
+                  : 'rgba(255, 255, 255, 0.05)',
+            } as React.CSSProperties
+          }
+          onMouseDown={e => {
+            console.error(
+              '🎯 Barre MouseDown - isDocked:',
+              isDocked,
+              'clientX:',
+              e.clientX,
+              'clientY:',
+              e.clientY
+            );
             handleDragStart(e.clientX, e.clientY);
-            
+
             if (isDocked) {
-              // Auto-undock au premier mouvement de la souris
-              const autoUndockOnMove = (moveEvent: any) => {
-                const distance = Math.sqrt(
-                  Math.pow(moveEvent.clientX - e.clientX, 2) + 
-                  Math.pow(moveEvent.clientY - e.clientY, 2)
-                );
-                
-                if (distance > 3) { // Seuil très bas pour undock immédiat
-                  console.error('🔓 Auto-undock: distance=' + distance + 'px');
-                  handleUndock().then(() => {
-                    // Une fois undocké, commencer le drag ET la vérification de snap
+              // Si déjà docké, on lance
+              const autoUndockOnMove = (moveEvent: React.MouseEvent) => {
+                if (
+                  Math.hypot(
+                    moveEvent.clientX - e.clientX,
+                    moveEvent.clientY - e.clientY
+                  ) > 3
+                ) {
+                  document.removeEventListener(
+                    'mousemove',
+                    autoUndockOnMove as any
+                  );
+                  document.removeEventListener('mouseup', cancelAutoUndock);
+
+                  dragActiveRef.current = true; // on active le drag
+                  startSnapChecking(); // ⚡️ now
+                  setIsDocked(false); // optimiste pour éviter le “trou” du 1er tick
+
+                  handleUndock().then(() =>
                     setTimeout(() => {
                       invoke('start_input_dragging').catch(console.error);
-                      startSnapChecking(); // 🎯 IMPORTANT: Commencer la vérification
-                    }, 50); // Plus de temps pour que l'undock soit bien fini
-                  });
-                  
-                  // Nettoyer les listeners
-                  document.removeEventListener('mousemove', autoUndockOnMove);
-                  document.removeEventListener('mouseup', cancelAutoUndock);
+                    }, 30)
+                  );
                 }
               };
-              
               const cancelAutoUndock = () => {
-                document.removeEventListener('mousemove', autoUndockOnMove);
+                document.removeEventListener(
+                  'mousemove',
+                  autoUndockOnMove as any
+                );
                 document.removeEventListener('mouseup', cancelAutoUndock);
               };
-              
-              document.addEventListener('mousemove', autoUndockOnMove);
+              document.addEventListener('mousemove', autoUndockOnMove as any);
               document.addEventListener('mouseup', cancelAutoUndock);
             } else {
-              // Déjà undocké, commencer le drag ET la vérification immédiatement
-              console.error('🔄 Tentative start_input_dragging...');
+              console.error('⛔️ Barre non dockée - startSnapChecking');
+              dragActiveRef.current = true; // on active le drag
+              startSnapChecking();
               invoke('start_input_dragging').catch(console.error);
-              startSnapChecking(); // 🎯 IMPORTANT: Aussi pour les drags depuis undocked
             }
           }}
           onMouseUp={handleDragEnd}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              handleDragStart(e.clientX, e.clientY);
+            }
+          }}
         />
         {/* Boutons de debug */}
         <div style={{ display: 'flex', gap: '4px' }}>
@@ -265,73 +287,88 @@ const InputPage: React.FC = () => {
               console.error('🧪 Test checkSnapZone forcé');
               checkSnapZone();
             }}
-            style={{
-              WebkitAppRegion: 'no-drag',
-              background: 'rgba(255, 0, 0, 0.3)',
-              border: '1px solid rgba(255, 0, 0, 0.5)',
-              color: 'white',
-              cursor: 'pointer',
-              padding: '2px 6px',
-              borderRadius: '3px',
-              fontSize: '10px',
-            } as React.CSSProperties}
+            style={
+              {
+                WebkitAppRegion: 'no-drag',
+                background: 'rgba(255, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 0, 0, 0.5)',
+                color: 'white',
+                cursor: 'pointer',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontSize: '10px',
+              } as React.CSSProperties
+            }
           >
             Test Snap
           </button>
-          
+
           <button
             onClick={() => {
               console.error('🧪 Test startSnapChecking forcé');
               startSnapChecking();
             }}
-            style={{
-              WebkitAppRegion: 'no-drag',
-              background: 'rgba(0, 255, 0, 0.3)',
-              border: '1px solid rgba(0, 255, 0, 0.5)',
-              color: 'white',
-              cursor: 'pointer',
-              padding: '2px 6px',
-              borderRadius: '3px',
-              fontSize: '10px',
-            } as React.CSSProperties}
+            style={
+              {
+                WebkitAppRegion: 'no-drag',
+                background: 'rgba(0, 255, 0, 0.3)',
+                border: '1px solid rgba(0, 255, 0, 0.5)',
+                color: 'white',
+                cursor: 'pointer',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontSize: '10px',
+              } as React.CSSProperties
+            }
           >
             Start Check
           </button>
-          
+
           <button
             onClick={() => {
-              console.error('🧪 État actuel - isDocked:', isDocked, 'isDragging:', isDragging, 'isInSnapZone:', isInSnapZone);
+              console.error(
+                '🧪 État actuel - isDocked:',
+                isDocked,
+                'isDragging:',
+                isDragging,
+                'isInSnapZone:',
+                isInSnapZone
+              );
             }}
-            style={{
-              WebkitAppRegion: 'no-drag',
-              background: 'rgba(0, 0, 255, 0.3)',
-              border: '1px solid rgba(0, 0, 255, 0.5)',
-              color: 'white',
-              cursor: 'pointer',
-              padding: '2px 6px',
-              borderRadius: '3px',
-              fontSize: '10px',
-            } as React.CSSProperties}
+            style={
+              {
+                WebkitAppRegion: 'no-drag',
+                background: 'rgba(0, 0, 255, 0.3)',
+                border: '1px solid rgba(0, 0, 255, 0.5)',
+                color: 'white',
+                cursor: 'pointer',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontSize: '10px',
+              } as React.CSSProperties
+            }
           >
             État
           </button>
         </div>
-        
+
         {/* Bouton de backup */}
         {false && (
           <button
             onClick={isDocked ? handleUndock : handleDock}
-            style={{
-              WebkitAppRegion: 'no-drag',
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255, 255, 255, 0.7)',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              transition: 'color 0.2s',
-            } as React.CSSProperties}
+            style={
+              {
+                WebkitAppRegion: 'no-drag',
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255, 255, 255, 0.7)',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                transition: 'color 0.2s',
+              } as React.CSSProperties
+            }
             title={isDocked ? 'Détacher' : 'Attacher au HUD'}
           >
             {isDocked ? <Unlink size={12} /> : <Link size={12} />}
@@ -341,14 +378,19 @@ const InputPage: React.FC = () => {
 
       {/* INPUT ZONE */}
       <div
-        style={{
-          WebkitAppRegion: 'no-drag',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '8px',
-          borderBottom: messages.length > 0 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-        } as React.CSSProperties}
+        style={
+          {
+            WebkitAppRegion: 'no-drag',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '8px',
+            borderBottom:
+              messages.length > 0
+                ? '1px solid rgba(255, 255, 255, 0.1)'
+                : 'none',
+          } as React.CSSProperties
+        }
       >
         <Aperture size={14} style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
         <div style={{ width: '100%' }}>
@@ -365,26 +407,43 @@ const InputPage: React.FC = () => {
       {/* MESSAGES */}
       {messages.length > 0 && (
         <div
-          style={{
-            WebkitAppRegion: 'no-drag',
-            flex: 1,
-            padding: '16px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          } as React.CSSProperties}
+          style={
+            {
+              WebkitAppRegion: 'no-drag',
+              flex: 1,
+              padding: '16px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            } as React.CSSProperties
+          }
         >
           {messages.map((message, index) => (
-            <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>
+            <div
+              key={index}
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  textTransform: 'uppercase',
+                }}
+              >
                 {message.role === 'user' ? 'Vous' : 'Assistant'}
               </div>
               <div
                 style={{
                   padding: '12px',
-                  backgroundColor: message.role === 'user' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                  border: message.role === 'user' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  backgroundColor:
+                    message.role === 'user'
+                      ? 'rgba(59, 130, 246, 0.2)'
+                      : 'rgba(255, 255, 255, 0.05)',
+                  border:
+                    message.role === 'user'
+                      ? '1px solid rgba(59, 130, 246, 0.3)'
+                      : '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '8px',
                   color: 'white',
                   fontSize: '14px',
