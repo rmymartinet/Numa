@@ -68,6 +68,23 @@ const HUDBar: React.FC<HUDBarProps> = ({
     }
   };
 
+  // 🧠 Fonction pour afficher la ContextPage
+  const handleContextClick = async () => {
+    try {
+      // 🔄 Fermer le panel s'il est ouvert pour éviter la superposition
+      if (isPanelExpanded) {
+        await invoke('panel_hide');
+        onTogglePanel(); // Mettre à jour l'état local
+      }
+
+      // Afficher la ContextPage pour la gestion du contexte
+      await invoke('context_show');
+      console.log('ContextPage affichée (panel fermé si nécessaire)');
+    } catch (error) {
+      console.error("Erreur lors de l'affichage de la ContextPage:", error);
+    }
+  };
+
   return (
     <>
       <GlassContainer
@@ -81,7 +98,7 @@ const HUDBar: React.FC<HUDBarProps> = ({
       >
         <CaptureButton isListening={isListening} onCapture={onCapture} />
 
-        <GlassButton>
+        <GlassButton onClick={handleContextClick}>
           <span className="text-sm">Context</span>
         </GlassButton>
 

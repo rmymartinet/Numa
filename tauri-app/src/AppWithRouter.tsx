@@ -4,6 +4,7 @@ import MainHUDPage from './pages/MainHUDPage';
 import PanelPage from './pages/PanelPage';
 import ResponsePage from './pages/ResponsePage';
 import InputPage from './pages/InputPage';
+import ContextPage from './pages/ContextPage';
 import { useDelayedObservability } from './hooks/useDelayedObservability';
 import { useStealthObservability } from './hooks/useStealthObservability';
 
@@ -20,6 +21,7 @@ const AppWithRouter: React.FC = () => {
         <Route path="/hud" element={<MainHUDPage />} />
         <Route path="/panel" element={<PanelPage />} />
         <Route path="/input" element={<InputPage />} />
+        <Route path="/context" element={<ContextPage />} />
         <Route path="/response" element={<ResponsePage />} />
       </Routes>
     </Router>

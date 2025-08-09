@@ -127,8 +127,6 @@ fn close_all_windows(app: AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-
-
 #[tauri::command]
 fn start_window_dragging(app: AppHandle) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window("hud") {
@@ -931,37 +929,62 @@ fn get_hud_position_and_size(app: AppHandle) -> tauri::Result<serde_json::Value>
 
 #[tauri::command]
 fn check_snap_distance(app: AppHandle) -> tauri::Result<serde_json::Value> {
-    if let Some(input) = app.get_webview_window("input") {
-        if let Some(hud) = app.get_webview_window("hud") {
-            let input_pos = input.outer_position()?;
-            let input_size = input.outer_size()?;
-            let hud_pos = hud.outer_position()?;
-            let hud_size = hud.outer_size()?;
+    if let Some(hud) = app.get_webview_window("hud") {
+        let hud_pos = hud.outer_position()?;
+        let hud_size = hud.outer_size()?;
+        let hud_center_x = hud_pos.x as f64 + (hud_size.width as f64 / 2.0);
+        let hud_center_y = hud_pos.y as f64 + (hud_size.height as f64 / 2.0);
+        let snap_threshold = 200.0;
 
-            // Calculer la distance entre les centres
-            let input_center_x = input_pos.x as f64 + (input_size.width as f64 / 2.0);
-            let input_center_y = input_pos.y as f64 + (input_size.height as f64 / 2.0);
-            let hud_center_x = hud_pos.x as f64 + (hud_size.width as f64 / 2.0);
-            let hud_center_y = hud_pos.y as f64 + (hud_size.height as f64 / 2.0);
+        // Try input window first
+        if let Some(input) = app.get_webview_window("input") {
+            if input.is_visible()? {
+                let input_pos = input.outer_position()?;
+                let input_size = input.outer_size()?;
+                let input_center_x = input_pos.x as f64 + (input_size.width as f64 / 2.0);
+                let input_center_y = input_pos.y as f64 + (input_size.height as f64 / 2.0);
+                let distance = ((input_center_x - hud_center_x).powi(2) + (input_center_y - hud_center_y).powi(2)).sqrt();
+                let is_in_snap_zone = distance <= snap_threshold;
 
-            let distance = ((input_center_x - hud_center_x).powi(2) + (input_center_y - hud_center_y).powi(2)).sqrt();
-            let snap_threshold = 200.0; // 200 pixels (plus facile à tester)
-            let is_in_snap_zone = distance <= snap_threshold;
+                println!("🎯 Input snap check: distance={:.1}px, should_snap={}", distance, is_in_snap_zone);
 
-            println!("🎯 Snap check: distance={:.1}px, threshold={:.1}px, should_snap={}", distance, snap_threshold, is_in_snap_zone);
-
-            Ok(serde_json::json!({
-                "distance": distance,
-                "threshold": snap_threshold,
-                "should_snap": is_in_snap_zone,
-                "input_pos": { "x": input_pos.x, "y": input_pos.y },
-                "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
-            }))
-        } else {
-            Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "HUD window not found")))
+                return Ok(serde_json::json!({
+                    "distance": distance,
+                    "threshold": snap_threshold,
+                    "should_snap": is_in_snap_zone,
+                    "window_type": "input",
+                    "target_pos": { "x": input_pos.x, "y": input_pos.y },
+                    "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
+                }));
+            }
         }
+
+        // Try context window
+        if let Some(context) = app.get_webview_window("context") {
+            if context.is_visible()? {
+                let context_pos = context.outer_position()?;
+                let context_size = context.outer_size()?;
+                let context_center_x = context_pos.x as f64 + (context_size.width as f64 / 2.0);
+                let context_center_y = context_pos.y as f64 + (context_size.height as f64 / 2.0);
+                let distance = ((context_center_x - hud_center_x).powi(2) + (context_center_y - hud_center_y).powi(2)).sqrt();
+                let is_in_snap_zone = distance <= snap_threshold;
+
+                println!("🎯 Context snap check: distance={:.1}px, should_snap={}", distance, is_in_snap_zone);
+
+                return Ok(serde_json::json!({
+                    "distance": distance,
+                    "threshold": snap_threshold,
+                    "should_snap": is_in_snap_zone,
+                    "window_type": "context",
+                    "target_pos": { "x": context_pos.x, "y": context_pos.y },
+                    "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
+                }));
+            }
+        }
+
+        Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "No draggable window found")))
     } else {
-        Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "Input window not found")))
+        Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "HUD window not found")))
     }
 }
 
@@ -1037,6 +1060,205 @@ fn start_input_dragging(app: AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+
+// ======================== CONTEXT PAGE COMMANDS =============================
+
+#[tauri::command]
+fn context_show(app: AppHandle) -> tauri::Result<()> {
+    ensure_context(&app)?;
+    let hud = app.get_webview_window("hud")
+        .ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let context = app.get_webview_window("context")
+        .ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Context window not found")))?;
+
+    // Pré-position “hint” (facultatif)
+    let hud_pos = hud.outer_position()?;
+    let hud_size = hud.outer_size()?;
+    let x = hud_pos.x + 10;
+    let y = hud_pos.y + hud_size.height as i32 + 10;
+    context.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)))?;
+    context.show()?; // affichage immédiat si tu veux
+
+    // Dock réel (attache + reposition final + event) — on CLONE app
+    let app2 = app.clone();
+    context_dock(app2)
+}
+
+#[tauri::command]
+fn context_hide(app: AppHandle) -> tauri::Result<()> {
+    if let Some(context) = app.get_webview_window("context") {
+        context.hide()?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn context_undock(app: AppHandle) -> tauri::Result<()> {
+    if let Some(context) = app.get_webview_window("context") {
+        if let Some(hud) = app.get_webview_window("hud") {
+            println!("🔒 Undocking ContextPage from HUD");
+
+            #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+            unsafe {
+                use objc::{msg_send, sel, sel_impl};
+                let context_win = context.ns_window()? as *mut objc::runtime::Object;
+                let hud_win = hud.ns_window()? as *mut objc::runtime::Object;
+
+                // Detach from HUD
+                let _: () = msg_send![hud_win, removeChildWindow: context_win];
+                let _: () = msg_send![context_win, setParentWindow: std::ptr::null::<objc::runtime::Object>()];
+
+                // Make window movable and bring to front
+                let _: () = msg_send![context_win, setMovable: true];
+                let _: () = msg_send![context_win, orderFront: std::ptr::null::<objc::runtime::Object>()];
+            }
+
+            // Emit undocked event
+            app.emit("context:undocked", ())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn context_dock(app: AppHandle) -> tauri::Result<()> {
+    if let Some(context) = app.get_webview_window("context") {
+        if let Some(hud) = app.get_webview_window("hud") {
+            println!("🔒 Docking ContextPage to HUD");
+
+            #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+            unsafe {
+                use objc::{msg_send, sel, sel_impl};
+                let context_win = context.ns_window()? as *mut objc::runtime::Object;
+                let hud_win = hud.ns_window()? as *mut objc::runtime::Object;
+
+                // Attach to HUD as child
+                let _: () = msg_send![hud_win, addChildWindow: context_win ordered: 1_i32];
+                let _: () = msg_send![context_win, setParentWindow: hud_win];
+
+                // Make window non-movable when docked
+                let _: () = msg_send![context_win, setMovable: false];
+                let _: () = msg_send![context_win, setLevel: 2_i32];
+            }
+
+            // Position relative to HUD
+            let hud_pos = hud.outer_position()?;
+            let hud_size = hud.outer_size()?;
+
+            let context_x = hud_pos.x + 10;
+            let context_y = hud_pos.y + hud_size.height as i32 + 10;
+
+            context.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(context_x, context_y)))?;
+
+            // Emit docked event
+            app.emit("context:docked", ())?;
+        }
+
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = context.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, display];
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn check_context_snap_distance(app: AppHandle) -> tauri::Result<serde_json::Value> {
+    if let Some(context) = app.get_webview_window("context") {
+        if let Some(hud) = app.get_webview_window("hud") {
+            let context_pos = context.outer_position()?;
+            let context_size = context.outer_size()?;
+            let hud_pos = hud.outer_position()?;
+            let hud_size = hud.outer_size()?;
+
+            // Calculate distance between centers
+            let context_center_x = context_pos.x as f64 + (context_size.width as f64 / 2.0);
+            let context_center_y = context_pos.y as f64 + (context_size.height as f64 / 2.0);
+            let hud_center_x = hud_pos.x as f64 + (hud_size.width as f64 / 2.0);
+            let hud_center_y = hud_pos.y as f64 + (hud_size.height as f64 / 2.0);
+
+            let distance = ((context_center_x - hud_center_x).powi(2) + (context_center_y - hud_center_y).powi(2)).sqrt();
+            let snap_threshold = 200.0;
+            let is_in_snap_zone = distance <= snap_threshold;
+
+            println!("🎯 Context snap check: distance={:.1}px, threshold={:.1}px, should_snap={}", distance, snap_threshold, is_in_snap_zone);
+
+            Ok(serde_json::json!({
+                "distance": distance,
+                "threshold": snap_threshold,
+                "should_snap": is_in_snap_zone,
+                "context_pos": { "x": context_pos.x, "y": context_pos.y },
+                "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
+            }))
+        } else {
+            Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "HUD window not found")))
+        }
+    } else {
+        Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "Context window not found")))
+    }
+}
+
+#[tauri::command]
+fn start_context_dragging(app: AppHandle) -> tauri::Result<()> {
+  if let Some(context) = app.get_webview_window("context") {
+    #[cfg(all(target_os="macos", feature="stealth_macos"))]
+    unsafe {
+      use objc::{msg_send, sel, sel_impl};
+      let win = context.ns_window()? as *mut objc::runtime::Object;
+      // s'assurer qu'elle est détachée et movable
+      let _: *mut objc::runtime::Object = msg_send![win, parentWindow];
+      let _: () = msg_send![win, setMovable: true];
+    }
+    context.start_dragging()?;     // ⬅️ comme InputPage
+    #[cfg(all(target_os="macos", feature="stealth_macos"))]
+    unsafe {
+      use objc::{msg_send, sel, sel_impl};
+      let win = context.ns_window()? as *mut objc::runtime::Object;
+      let _: () = msg_send![win, display];
+    }
+  }
+  Ok(())
+}
+
+fn ensure_context(app: &AppHandle) -> tauri::Result<tauri::WebviewWindow> {
+    if let Some(existing) = app.get_webview_window("context") {
+        return Ok(existing);
+    }
+
+    let context = tauri::WebviewWindowBuilder::new(app, "context", WebviewUrl::App("index.html#/context".into()))
+        .inner_size(500.0, 400.0)
+        .min_inner_size(300.0, 200.0)
+        .resizable(true)
+        .decorations(false)
+        .transparent(true)
+        .always_on_top(true)
+        .visible(false)
+        .build()?;
+
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        let context_ns = context.ns_window()? as *mut objc::runtime::Object;
+
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+
+            let clear: *mut objc::runtime::Object = msg_send![objc::class!(NSColor), clearColor];
+            let _: () = msg_send![context_ns, setOpaque: false];
+            let _: () = msg_send![context_ns, setBackgroundColor: clear];
+
+            const BORDERLESS: i32 = 0;
+            let _: () = msg_send![context_ns, setStyleMask: BORDERLESS];
+            let _: () = msg_send![context_ns, setHasShadow: false];
+
+            if app.state::<stealth::StealthState>().is_active() {
+                let _: () = msg_send![context_ns, setSharingType: 0u64];
+            }
+        }
+    }
+    Ok(context)
+}
 
 #[tauri::command]
 fn toggle_stealth_cmd(app: AppHandle) -> Result<bool, String> {
@@ -1167,6 +1389,12 @@ pub fn run() {
             get_hud_position_and_size,
             check_snap_distance,
             start_input_dragging,
+            context_show,
+            context_hide,
+            context_undock,
+            context_dock,
+            check_context_snap_distance,
+            start_context_dragging,
             start_chat,
             toggle_stealth_cmd,
             get_stealth_status,
