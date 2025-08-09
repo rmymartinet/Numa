@@ -91,7 +91,7 @@ fn close_all_windows(app: AppHandle) -> tauri::Result<()> {
 fn start_window_dragging(app: AppHandle) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window("hud") {
         window.start_dragging()?;
-        
+
         // 🔧 Fix macOS ghosting: Force window redraw after drag to eliminate ghost images
         #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
         unsafe {
@@ -146,6 +146,12 @@ const RESPONSE_WIDTH: f64 = 600.0;
 const RESPONSE_HEIGHT: f64 = 400.0;
 const RESPONSE_INITIAL_X: f64 = 400.0;  // Même position que le panel
 const RESPONSE_INITIAL_Y: f64 = 490.0;  // Même position que le panel
+
+// Configuration de la fenêtre input
+const INPUT_WIDTH: f64 = 700.0;   // Largeur InputPage
+const INPUT_HEIGHT: f64 = 80.0;   // Hauteur InputPage (plus petite, format barre)
+const INPUT_INITIAL_X: f64 = 400.0;  // Même position que response
+const INPUT_INITIAL_Y: f64 = 490.0;  // Même position que response
 
 // Fonction d'aide pour appliquer l'état furtif actuel
 fn apply_current_stealth(app: &AppHandle, win: &tauri::WebviewWindow) -> tauri::Result<()> {
@@ -451,7 +457,7 @@ fn response_show(app: AppHandle) -> tauri::Result<()> {
     let response = app.get_webview_window("response").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Response window not found")))?;
 
     // 🎯 POSITIONNEMENT DYNAMIQUE ResponsePage : Même logique que le panel
-    
+
     // 0) Écran du HUD et ses caractéristiques
     let monitor = hud.current_monitor().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get monitor: {}", e))))?.ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "No monitor found")))?;
     let scale = monitor.scale_factor();
@@ -484,14 +490,14 @@ fn response_show(app: AppHandle) -> tauri::Result<()> {
     // 5) Retour en physique avec arrondi + coordonnées globales
     let target_x_phys_global = (target_x_log * scale).round() as i32 + mon_pos_phys.x;
     let target_y_phys_global = (target_y_log * scale).round() as i32 + mon_pos_phys.y;
-    
+
     let response_x = target_x_phys_global;
     let response_y = target_y_phys_global;
 
     println!("🎯 ResponsePage Scale: {}, HUD logique: ({:.1}, {:.1}), Response logique: ({:.1}, {:.1})", scale, hud_pos_log.x, hud_pos_log.y, target_x_log, target_y_log);
     println!("🎯 ResponsePage Position finale physique: Response=({}, {})", response_x, response_y);
 
-    // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition  
+    // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition
     response.set_position(tauri::PhysicalPosition::new(response_x, response_y)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set response position: {}", e))))?;
 
     // Rendre visible
@@ -548,12 +554,60 @@ fn test_response_window(app: AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-#[tauri::command]
-fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
-    println!("🚀 start_chat called with message: {}", message);
+/// Affiche ResponsePage positionnée en dessous de l'InputPage
+fn response_show_below_input(app: &AppHandle) -> tauri::Result<()> {
+    ensure_response(app)?;
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let response = app.get_webview_window("response").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Response window not found")))?;
 
-    // 1) Assure/affiche la fenêtre réponse
-    let response = ensure_response(&app)?;
+    // 🎯 POSITIONNEMENT EN DESSOUS DE L'INPUT : Même logique mais avec gap additionnel
+
+    // 0) Écran du HUD et ses caractéristiques
+    let monitor = hud.current_monitor().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get monitor: {}", e))))?.ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "No monitor found")))?;
+    let scale = monitor.scale_factor();
+    let mon_pos_phys = monitor.position(); // Origine physique de l'écran dans le desktop virtuel
+
+    // 1) Position/taille HUD (physique globale → locale physique → logique)
+    let hud_pos_phys_global = hud.outer_position().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD position: {}", e))))?;
+    let hud_pos_phys_local = tauri::PhysicalPosition::new(
+        hud_pos_phys_global.x - mon_pos_phys.x,
+        hud_pos_phys_global.y - mon_pos_phys.y,
+    );
+    let hud_pos_log: tauri::LogicalPosition<f64> = hud_pos_phys_local.to_logical(scale);
+    let hud_size_log: tauri::LogicalSize<f64> = hud.outer_size().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD size: {}", e))))?.to_logical(scale);
+
+    // 2) Tailles en logique
+    let response_size_log = tauri::LogicalSize::new(RESPONSE_WIDTH as f64, RESPONSE_HEIGHT as f64);
+    let input_size_log = tauri::LogicalSize::new(INPUT_WIDTH as f64, INPUT_HEIGHT as f64);
+
+    // 3) Offset manuel par écran selon scale factor (même logique que panel)
+    let x_manual_points = match scale {
+        s if (s - 2.0).abs() < 0.01 => 0.0,   // Retina (scale=2.0): parfait
+        s if (s - 1.0).abs() < 0.01 => -20.0, // HDMI (scale=1.0): décaler vers la gauche
+        _ => -10.0, // Autres scales: ajustement moyen
+    };
+
+    // 4) Calculs en logique : Position EN DESSOUS de l'InputPage
+    let gap_y_points = 20.0;
+    let input_gap = 10.0; // Gap entre InputPage et ResponsePage
+
+    let target_x_log = hud_pos_log.x + (hud_size_log.width - response_size_log.width) / 2.0 + x_manual_points;
+    let target_y_log = hud_pos_log.y + hud_size_log.height + gap_y_points + input_size_log.height + input_gap;
+
+    // 5) Retour en physique avec arrondi + coordonnées globales
+    let target_x_phys_global = (target_x_log * scale).round() as i32 + mon_pos_phys.x;
+    let target_y_phys_global = (target_y_log * scale).round() as i32 + mon_pos_phys.y;
+
+    let response_x = target_x_phys_global;
+    let response_y = target_y_phys_global;
+
+    println!("🎯 ResponsePage (en dessous InputPage) Scale: {}, HUD logique: ({:.1}, {:.1}), Response logique: ({:.1}, {:.1})", scale, hud_pos_log.x, hud_pos_log.y, target_x_log, target_y_log);
+    println!("🎯 ResponsePage Position finale physique: Response=({}, {})", response_x, response_y);
+
+    // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition
+    response.set_position(tauri::PhysicalPosition::new(response_x, response_y)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set response position: {}", e))))?;
+
+    // Rendre visible
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     unsafe {
         use objc::{msg_send, sel, sel_impl};
@@ -561,9 +615,21 @@ fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
         let _: () = msg_send![win, setAlphaValue: 1.0];
         let _: () = msg_send![win, setIgnoresMouseEvents: false];
     }
-    apply_current_stealth(&app, &response)?;
+
+    // Appliquer l'état furtif actuel
+    apply_current_stealth(app, &response)?;
+
     response.show()?;
-    println!("🚀 Response window shown");
+    Ok(())
+}
+
+#[tauri::command]
+fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
+    println!("🚀 start_chat called with message: {}", message);
+
+    // 1) Affiche la fenêtre réponse EN DESSOUS de l'InputPage
+    response_show_below_input(&app)?;
+    println!("🚀 Response window shown below InputPage");
 
     // 2) Attends le "response:ready" envoyé par la webview, puis émet "chat:start"
     let app_for_start = app.clone();
@@ -612,6 +678,141 @@ fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
         }
     });
 
+    Ok(())
+}
+
+// === INPUT WINDOW MANAGEMENT ===
+
+fn ensure_input(app: &AppHandle) -> tauri::Result<WebviewWindow> {
+    if let Some(w) = app.get_webview_window("input") {
+        return Ok(w); // déjà créé
+    }
+
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let parent_ptr = hud.ns_window()?;
+
+    let input = WebviewWindowBuilder::new(
+        app,
+        "input",
+        WebviewUrl::External("http://localhost:1420/#/input".parse().unwrap()),
+    )
+    .parent_raw(parent_ptr)                 // Child window du HUD
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .resizable(false)
+    .minimizable(false)
+    .closable(false)
+    .skip_taskbar(true)
+    .inner_size(INPUT_WIDTH, INPUT_HEIGHT)
+    .position(INPUT_INITIAL_X, INPUT_INITIAL_Y)
+    .visible(false)
+    .build()?;
+
+    // Style macOS similaire au panel
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    unsafe {
+        use objc::{class, msg_send, sel, sel_impl};
+        use objc::runtime::Object;
+        let input_ns: *mut Object = input.ns_window()? as *mut Object;
+
+        // Fenêtre transparente
+        let clear: *mut Object = msg_send![class!(NSColor), clearColor];
+        let _: () = msg_send![input_ns, setOpaque: false];
+        let _: () = msg_send![input_ns, setBackgroundColor: clear];
+
+        // Style borderless sans ombre
+        const BORDERLESS: u64 = 0;
+        let _: () = msg_send![input_ns, setStyleMask: BORDERLESS];
+        let _: () = msg_send![input_ns, setHasShadow: false];
+
+        // Appliquer stealth si actif
+        if app.state::<stealth::StealthState>().is_active() {
+            let _: () = msg_send![input_ns, setSharingType: 0u64];
+        }
+    }
+    Ok(input)
+}
+
+#[tauri::command]
+fn input_show(app: AppHandle) -> tauri::Result<()> {
+    ensure_input(&app)?;
+    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
+    let input = app.get_webview_window("input").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Input window not found")))?;
+
+    // 🎯 POSITIONNEMENT DYNAMIQUE InputPage : Même logique que ResponsePage
+
+    // 0) Écran du HUD et ses caractéristiques
+    let monitor = hud.current_monitor().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get monitor: {}", e))))?.ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "No monitor found")))?;
+    let scale = monitor.scale_factor();
+    let mon_pos_phys = monitor.position(); // Origine physique de l'écran dans le desktop virtuel
+
+    // 1) Position/taille HUD (physique globale → locale physique → logique)
+    let hud_pos_phys_global = hud.outer_position().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD position: {}", e))))?;
+    let hud_pos_phys_local = tauri::PhysicalPosition::new(
+        hud_pos_phys_global.x - mon_pos_phys.x,
+        hud_pos_phys_global.y - mon_pos_phys.y,
+    );
+    let hud_pos_log: tauri::LogicalPosition<f64> = hud_pos_phys_local.to_logical(scale);
+    let hud_size_log: tauri::LogicalSize<f64> = hud.outer_size().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD size: {}", e))))?.to_logical(scale);
+
+    // 2) Taille input en logique (constante connue)
+    let input_size_log = tauri::LogicalSize::new(INPUT_WIDTH as f64, INPUT_HEIGHT as f64);
+
+    // 3) Offset manuel par écran selon scale factor (même logique que panel)
+    let x_manual_points = match scale {
+        s if (s - 2.0).abs() < 0.01 => 0.0,   // Retina (scale=2.0): parfait
+        s if (s - 1.0).abs() < 0.01 => -20.0, // HDMI (scale=1.0): décaler vers la gauche
+        _ => -10.0, // Autres scales: ajustement moyen
+    };
+
+    // 4) Calculs en logique (espace visuel cohérent)
+    let gap_y_points = 20.0;
+    let target_x_log = hud_pos_log.x + (hud_size_log.width - input_size_log.width) / 2.0 + x_manual_points;
+    let target_y_log = hud_pos_log.y + hud_size_log.height + gap_y_points;
+
+    // 5) Retour en physique avec arrondi + coordonnées globales
+    let target_x_phys_global = (target_x_log * scale).round() as i32 + mon_pos_phys.x;
+    let target_y_phys_global = (target_y_log * scale).round() as i32 + mon_pos_phys.y;
+
+    let input_x = target_x_phys_global;
+    let input_y = target_y_phys_global;
+
+    println!("🎯 InputPage Scale: {}, HUD logique: ({:.1}, {:.1}), Input logique: ({:.1}, {:.1})", scale, hud_pos_log.x, hud_pos_log.y, target_x_log, target_y_log);
+    println!("🎯 InputPage Position finale physique: Input=({}, {})", input_x, input_y);
+
+    // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition
+    input.set_position(tauri::PhysicalPosition::new(input_x, input_y)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set input position: {}", e))))?;
+
+    // Rendre visible
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
+        let win = input.ns_window()? as *mut objc::runtime::Object;
+        let _: () = msg_send![win, setAlphaValue: 1.0];
+        let _: () = msg_send![win, setIgnoresMouseEvents: false];
+    }
+
+    // Appliquer l'état furtif actuel
+    apply_current_stealth(&app, &input)?;
+
+    input.show()?;
+    Ok(())
+}
+
+#[tauri::command]
+fn input_hide(app: AppHandle) -> tauri::Result<()> {
+    if let Some(input) = app.get_webview_window("input") {
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = input.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, setAlphaValue: 0.0];
+            let _: () = msg_send![win, setIgnoresMouseEvents: true];
+        }
+
+        apply_current_stealth(&app, &input)?;
+    }
     Ok(())
 }
 
@@ -736,6 +937,8 @@ pub fn run() {
             response_show,
             response_hide,
             test_response_window,
+            input_show,
+            input_hide,
             start_chat,
             toggle_stealth_cmd,
             get_stealth_status,

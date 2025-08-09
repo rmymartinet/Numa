@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainHUDPage from './pages/MainHUDPage';
 import PanelPage from './pages/PanelPage';
 import ResponsePage from './pages/ResponsePage';
+import InputPage from './pages/InputPage';
 import { useDelayedObservability } from './hooks/useDelayedObservability';
 import { useStealthObservability } from './hooks/useStealthObservability';
 
@@ -19,6 +20,7 @@ const AppWithRouter: React.FC = () => {
         <Route path="/hud" element={<MainHUDPage />} />
         <Route path="/panel" element={<PanelPage />} />
         <Route path="/response" element={<ResponsePage />} />
+        <Route path="/input" element={<InputPage />} />
       </Routes>
     </Router>
   );

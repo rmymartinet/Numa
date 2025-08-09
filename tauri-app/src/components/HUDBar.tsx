@@ -70,13 +70,20 @@ const HUDBar: React.FC<HUDBarProps> = ({
     }
   };
 
-  // 💬 Fonction pour afficher la ResponsePage (fenêtre de chat)
+  // 💬 Fonction pour afficher l'InputPage (ferme le panel si ouvert)
   const handleAskClick = async () => {
     try {
-      await invoke('response_show');
-      console.log('ResponsePage affichée');
+      // 🔄 Fermer le panel s'il est ouvert pour éviter la superposition
+      if (isPanelExpanded) {
+        await invoke('panel_hide');
+        onTogglePanel(); // Mettre à jour l'état local
+      }
+
+      // Afficher l'InputPage pour poser la question
+      await invoke('input_show');
+      console.log('InputPage affichée (panel fermé si nécessaire)');
     } catch (error) {
-      console.error('Erreur lors de l\'affichage de la ResponsePage:', error);
+      console.error("Erreur lors de l'affichage de l'InputPage:", error);
     }
   };
 
@@ -98,21 +105,6 @@ const HUDBar: React.FC<HUDBarProps> = ({
       <GlassButton onClick={handleAskClick}>
         <span className="text-sm">Ask</span>
       </GlassButton>
-      {/*
-      <InputField
-        ref={inputRef}
-        value={inputText}
-        onChange={onInputChange}
-        onChatSubmit={async (message: string) => {
-          try {
-            // Use the new start_chat command
-            await invoke('start_chat', { message });
-            console.log('Chat started:', message);
-          } catch (error) {
-            console.error('Error starting chat:', error);
-          }
-        }}
-      /> */}
 
       <div
         style={{

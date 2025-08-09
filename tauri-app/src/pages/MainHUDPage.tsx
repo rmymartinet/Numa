@@ -98,6 +98,15 @@ const MainHUDPage: React.FC = () => {
 
     try {
       if (newState) {
+        // 🔄 Fermer la ResponsePage si elle est ouverte pour éviter la superposition
+        try {
+          await invoke('response_hide');
+          console.log('ResponsePage fermée avant ouverture du panel');
+        } catch (responseError) {
+          // Pas grave si la ResponsePage n'était pas ouverte
+          console.log('ResponsePage n\'était pas ouverte');
+        }
+
         console.log('Appel de panel_show');
         await invoke('panel_show');
         console.log('panel_show appelé avec succès');

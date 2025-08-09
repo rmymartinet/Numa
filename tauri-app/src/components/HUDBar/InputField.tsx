@@ -4,10 +4,11 @@ interface InputFieldProps {
   value: string;
   onChange: (text: string) => void;
   onChatSubmit?: (message: string) => void;
+  placeholder?: string;
 }
 
 const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
-  ({ value, onChange, onChatSubmit }, ref) => {
+  ({ value, onChange, onChatSubmit, placeholder = 'I Ask...' }, ref) => {
     return (
       <div
         style={{
@@ -20,19 +21,19 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
           type="text"
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="I Ask..."
+          placeholder={placeholder}
           className="glass__btn"
-          // style={{
-          //   width: '100%',
-          //   padding: '3px 3px',
-          //   backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          //   border: 'none',
-          //   borderRadius: '25px',
-          //   color: 'white',
-          //   fontSize: '14px',
-          //   outline: 'none',
-          //   transition: 'all 0.2s ease',
-          // }}
+          style={{
+            width: '100%',
+            padding: '3px 3px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            borderRadius: '25px',
+            color: 'white',
+            fontSize: '14px',
+            outline: 'none',
+            transition: 'all 0.2s ease',
+          }}
           onKeyPress={e => {
             if (e.key === 'Enter' && value.trim()) {
               console.log('Chat message envoyé:', value);
