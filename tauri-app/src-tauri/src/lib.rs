@@ -188,13 +188,14 @@ const RESPONSE_INITIAL_X: f64 = 400.0;  // Même position que le panel
 const RESPONSE_INITIAL_Y: f64 = 490.0;  // Même position que le panel
 
 // Configuration des fenêtres draggables
-const INPUT_WIDTH: f64 = 700.0;   
-const INPUT_HEIGHT: f64 = 80.0;   
+// 🎯 AMÉLIORATION : Tailles optimisées pour layout côte à côte
+const INPUT_WIDTH: f64 = 450.0;   // Réduit pour être côte à côte
+const INPUT_HEIGHT: f64 = 120.0;  // Un peu plus haut pour le contenu
 const INPUT_INITIAL_X: f64 = 400.0;  
 const INPUT_INITIAL_Y: f64 = 490.0;  
 
-const CONTEXT_WIDTH: f64 = 500.0;   
-const CONTEXT_HEIGHT: f64 = 400.0;   
+const CONTEXT_WIDTH: f64 = 400.0;   // Réduit pour être côte à côte  
+const CONTEXT_HEIGHT: f64 = 300.0;  // Ajusté proportionnellement
 const CONTEXT_INITIAL_X: f64 = 400.0;  
 const CONTEXT_INITIAL_Y: f64 = 490.0;
 
@@ -294,19 +295,41 @@ fn arrange_hud_children(app: &tauri::AppHandle) -> tauri::Result<()> {
         }
         (true, true) => {
             // Les deux visibles → tenter côte à côte
-            let total_w = input_size.0 + GAP + context_size.0;
-            let left_x = center_x(total_w);
-            let right_x = left_x + input_size.0 + GAP;
-
-            let fits_horizontally =
-                left_x >= screen.x &&
-                (right_x + context_size.0) <= (screen.x + screen.w);
+            // 🎯 CORRECTION : Context à gauche (contexte de conversation), Input à droite (zone de saisie)
+            let total_w = context_size.0 + GAP + input_size.0;
+            let available_w = screen.w - 40; // Marge de sécurité
+            
+            let fits_horizontally = total_w <= available_w;
 
             if fits_horizontally {
-                // input gauche, context droite
-                println!("🎯 Layout: Côte à côte - Input à ({}, {}), Context à ({}, {})", left_x, line_y, right_x, line_y);
-                if let Some(wi) = &input { set_pos(wi, left_x, line_y)?; }
-                if let Some(wc) = &context { set_pos(wc, right_x, line_y)?; }
+                // Placement normal côte à côte
+                let left_x = center_x(total_w);
+                let right_x = left_x + context_size.0 + GAP;
+                
+                println!("🎯 Layout: Côte à côte - Context à ({}, {}), Input à ({}, {})", left_x, line_y, right_x, line_y);
+                if let Some(wc) = &context { set_pos(wc, left_x, line_y)?; }
+                if let Some(wi) = &input { set_pos(wi, right_x, line_y)?; }
+            } else if available_w > (GAP + 200 + 200) { // Au moins 200px chacune + gap
+                // 🎯 NOUVEAU : Layout adaptatif - réduire proportionnellement les tailles
+                let scale_factor = (available_w - GAP) as f64 / total_w as f64;
+                let new_context_w = (context_size.0 as f64 * scale_factor) as i32;
+                let new_input_w = available_w - GAP - new_context_w;
+                
+                let left_x = center_x(available_w);
+                let right_x = left_x + new_context_w + GAP;
+                
+                println!("🎯 Layout: Côte à côte adaptatif - Context à ({}, {}) [{}px], Input à ({}, {}) [{}px]", 
+                         left_x, line_y, new_context_w, right_x, line_y, new_input_w);
+                
+                // Ajuster les tailles temporairement
+                if let Some(wc) = &context { 
+                    let _ = wc.set_size(tauri::LogicalSize::new(new_context_w as f64, context_size.1 as f64));
+                    set_pos(wc, left_x, line_y)?; 
+                }
+                if let Some(wi) = &input { 
+                    let _ = wi.set_size(tauri::LogicalSize::new(new_input_w as f64, input_size.1 as f64));
+                    set_pos(wi, right_x, line_y)?; 
+                }
             } else {
                 // Fallback : pile (context sous input)
                 let input_x = center_x(input_size.0);
@@ -381,7 +404,7 @@ fn ensure_draggable_window(app: &AppHandle, window_name: &str, config: Draggable
     .decorations(false)
     .transparent(true)
     .always_on_top(true)
-    .resizable(window_name == "input") // Seul input est resizable
+    .resizable(true) // 🎯 NOUVEAU : Toutes les fenêtres draggables sont resizable
     .minimizable(false)
     .closable(false)
     .skip_taskbar(true)
@@ -1301,6 +1324,30 @@ fn start_context_dragging(app: AppHandle) -> tauri::Result<()> {
 }
 
 #[tauri::command]
+fn context_resize(app: AppHandle, width: f64, height: f64) -> tauri::Result<()> {
+    if let Some(context) = app.get_webview_window("context") {
+        let current_pos = context.outer_position()?;
+        let new_size = tauri::LogicalSize::new(width, height);
+
+        // Redimensionner la fenêtre
+        context.set_size(new_size)?;
+        context.set_position(current_pos)?;
+
+        // Réorganiser le layout si la taille a changé
+        let _ = arrange_hud_children(&app);
+
+        // Force redraw sur macOS
+        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+        unsafe {
+            use objc::{msg_send, sel, sel_impl};
+            let win = context.ns_window()? as *mut objc::runtime::Object;
+            let _: () = msg_send![win, display];
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn toggle_stealth_cmd(app: AppHandle) -> Result<bool, String> {
     use validation::check_rate_limit;
 
@@ -1435,6 +1482,7 @@ pub fn run() {
             context_dock,
             check_context_snap_distance,
             start_context_dragging,
+            context_resize,
             start_chat,
             toggle_stealth_cmd,
             get_stealth_status,
