@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 
 interface TogglePanelButtonProps {
   isExpanded: boolean;
@@ -17,14 +17,8 @@ const TogglePanelButton: React.FC<TogglePanelButtonProps> = ({
   };
 
   return (
-    <button
-      onClick={handleClick}
-      className="glass__btn"
-      style={{
-        display: 'flex',
-      }}
-    >
-      {isExpanded ? <ChevronUp /> : <ChevronDown />}
+    <button onClick={handleClick} className="glass__btn">
+      <SlidersHorizontal size={14} />
     </button>
   );
 };

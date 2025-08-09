@@ -86,15 +86,13 @@ const HUDBar: React.FC<HUDBarProps> = ({
   };
 
   return (
-    <>
+    <div style={{ display: 'flex', gap: '10px' }}>
       <GlassContainer
         onMouseDown={handleMouseDown}
-        // variant="pill"
-        className="min-w-[400px] max-w-[1000px] cursor-grab select-none z-[1000]"
+        className="cursor-grab select-none z-[1000]"
         style={{
           pointerEvents: 'auto',
         }}
-        // onMouseDown={handleMouseDown}
       >
         <CaptureButton isListening={isListening} onCapture={onCapture} />
 
@@ -113,24 +111,25 @@ const HUDBar: React.FC<HUDBarProps> = ({
             backgroundColor: 'rgba(255, 255, 255, 0.2)',
           }}
         />
-
-        <TogglePanelButton
-          isExpanded={isPanelExpanded}
-          onToggle={onTogglePanel}
-        />
       </GlassContainer>
 
-      {/* <GlassContainer>
-        <GlassButton
-          onClick={handleForceReposition}
-          title="Debug: Forcer le repositionnement du panel"
-        >
-          <SlidersHorizontal />
+      <GlassContainer
+        className="cursor-grab select-none z-[1000]"
+        style={{
+          pointerEvents: 'auto',
+        }}
+        onMouseDown={handleMouseDown}
+      >
+        <GlassButton title="Debug: Forcer le repositionnement du panel">
+          <TogglePanelButton
+            isExpanded={isPanelExpanded}
+            onToggle={onTogglePanel}
+          />
         </GlassButton>
 
         <CloseButton onClose={onClose} />
-      </GlassContainer> */}
-    </>
+      </GlassContainer>
+    </div>
   );
 };
 
