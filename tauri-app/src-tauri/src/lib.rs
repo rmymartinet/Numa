@@ -1094,29 +1094,45 @@ fn context_hide(app: AppHandle) -> tauri::Result<()> {
 
 #[tauri::command]
 fn context_undock(app: AppHandle) -> tauri::Result<()> {
-    if let Some(context) = app.get_webview_window("context") {
-        if let Some(hud) = app.get_webview_window("hud") {
-            println!("🔒 Undocking ContextPage from HUD");
+    let hud = app
+        .get_webview_window("hud")
+        .ok_or_else(|| tauri::Error::from(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "HUD window not found",
+        )))?;
 
-            #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
-            unsafe {
-                use objc::{msg_send, sel, sel_impl};
-                let context_win = context.ns_window()? as *mut objc::runtime::Object;
-                let hud_win = hud.ns_window()? as *mut objc::runtime::Object;
+    let context = app
+        .get_webview_window("context")
+        .ok_or_else(|| tauri::Error::from(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Context window not found",
+        )))?;
 
-                // Detach from HUD
-                let _: () = msg_send![hud_win, removeChildWindow: context_win];
-                let _: () = msg_send![context_win, setParentWindow: std::ptr::null::<objc::runtime::Object>()];
+    // --- macOS spécifique : détacher complètement ---
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
 
-                // Make window movable and bring to front
-                let _: () = msg_send![context_win, setMovable: true];
-                let _: () = msg_send![context_win, orderFront: std::ptr::null::<objc::runtime::Object>()];
-            }
+        let hud_win = hud.ns_window()? as *mut objc::runtime::Object;
+        let ctx_win = context.ns_window()? as *mut objc::runtime::Object;
 
-            // Emit undocked event
-            app.emit("context:undocked", ())?;
-        }
+        // Retirer le contexte comme enfant du HUD
+        let _: () = msg_send![hud_win, removeChildWindow: ctx_win];
+
+        // S'assurer qu'elle est movable
+        let _: () = msg_send![ctx_win, setMovable: true];
+
+        // Forcer au-dessus des autres fenêtres normales
+        let _: () = msg_send![ctx_win, orderFrontRegardless];
     }
+
+    // --- Niveau Tauri : toujours au-dessus & focus ---
+    context.set_always_on_top(true)?;
+    context.set_focus()?;
+
+    // On émet l'event "undocked" pour l'UI
+    app.emit("context:undocked", ())?;
+
     Ok(())
 }
 
