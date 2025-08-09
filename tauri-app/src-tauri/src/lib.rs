@@ -932,29 +932,50 @@ fn check_snap_distance(app: AppHandle) -> tauri::Result<serde_json::Value> {
     if let Some(hud) = app.get_webview_window("hud") {
         let hud_pos = hud.outer_position()?;
         let hud_size = hud.outer_size()?;
-        let hud_center_x = hud_pos.x as f64 + (hud_size.width as f64 / 2.0);
-        let hud_center_y = hud_pos.y as f64 + (hud_size.height as f64 / 2.0);
-        let snap_threshold = 200.0;
+
+        // Rectangle HUD
+        let hud_left = hud_pos.x as f64;
+        let hud_right = hud_left + hud_size.width as f64;
+        let hud_top = hud_pos.y as f64;
+        let hud_bottom = hud_top + hud_size.height as f64;
 
         // Try input window first
         if let Some(input) = app.get_webview_window("input") {
             if input.is_visible()? {
                 let input_pos = input.outer_position()?;
                 let input_size = input.outer_size()?;
-                let input_center_x = input_pos.x as f64 + (input_size.width as f64 / 2.0);
-                let input_center_y = input_pos.y as f64 + (input_size.height as f64 / 2.0);
-                let distance = ((input_center_x - hud_center_x).powi(2) + (input_center_y - hud_center_y).powi(2)).sqrt();
-                let is_in_snap_zone = distance <= snap_threshold;
 
-                println!("🎯 Input snap check: distance={:.1}px, should_snap={}", distance, is_in_snap_zone);
+                // Rectangle input
+                let in_left = input_pos.x as f64;
+                let in_right = in_left + input_size.width as f64;
+                let in_top = input_pos.y as f64;
+                let in_bottom = in_top + input_size.height as f64;
+
+                // Collision AABB
+                let is_in_snap_zone =
+                    in_right >= hud_left &&
+                    in_left <= hud_right &&
+                    in_bottom >= hud_top &&
+                    in_top <= hud_bottom;
+
+                println!("🎯 Input/HUD overlap: input=({}, {} -> {}, {}), hud=({}, {} -> {}, {}), should_snap={}",
+                    in_left, in_top, in_right, in_bottom, hud_left, hud_top, hud_right, hud_bottom, is_in_snap_zone);
 
                 return Ok(serde_json::json!({
-                    "distance": distance,
-                    "threshold": snap_threshold,
                     "should_snap": is_in_snap_zone,
                     "window_type": "input",
-                    "target_pos": { "x": input_pos.x, "y": input_pos.y },
-                    "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
+                    "input_rect": {
+                        "left": in_left,
+                        "right": in_right,
+                        "top": in_top,
+                        "bottom": in_bottom
+                    },
+                    "hud_rect": {
+                        "left": hud_left,
+                        "right": hud_right,
+                        "top": hud_top,
+                        "bottom": hud_bottom
+                    }
                 }));
             }
         }
@@ -964,20 +985,38 @@ fn check_snap_distance(app: AppHandle) -> tauri::Result<serde_json::Value> {
             if context.is_visible()? {
                 let context_pos = context.outer_position()?;
                 let context_size = context.outer_size()?;
-                let context_center_x = context_pos.x as f64 + (context_size.width as f64 / 2.0);
-                let context_center_y = context_pos.y as f64 + (context_size.height as f64 / 2.0);
-                let distance = ((context_center_x - hud_center_x).powi(2) + (context_center_y - hud_center_y).powi(2)).sqrt();
-                let is_in_snap_zone = distance <= snap_threshold;
 
-                println!("🎯 Context snap check: distance={:.1}px, should_snap={}", distance, is_in_snap_zone);
+                // Rectangle context
+                let ctx_left = context_pos.x as f64;
+                let ctx_right = ctx_left + context_size.width as f64;
+                let ctx_top = context_pos.y as f64;
+                let ctx_bottom = ctx_top + context_size.height as f64;
+
+                // Collision AABB
+                let is_in_snap_zone =
+                    ctx_right >= hud_left &&
+                    ctx_left <= hud_right &&
+                    ctx_bottom >= hud_top &&
+                    ctx_top <= hud_bottom;
+
+                println!("🎯 Context/HUD overlap: context=({}, {} -> {}, {}), hud=({}, {} -> {}, {}), should_snap={}",
+                    ctx_left, ctx_top, ctx_right, ctx_bottom, hud_left, hud_top, hud_right, hud_bottom, is_in_snap_zone);
 
                 return Ok(serde_json::json!({
-                    "distance": distance,
-                    "threshold": snap_threshold,
                     "should_snap": is_in_snap_zone,
                     "window_type": "context",
-                    "target_pos": { "x": context_pos.x, "y": context_pos.y },
-                    "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
+                    "context_rect": {
+                        "left": ctx_left,
+                        "right": ctx_right,
+                        "top": ctx_top,
+                        "bottom": ctx_bottom
+                    },
+                    "hud_rect": {
+                        "left": hud_left,
+                        "right": hud_right,
+                        "top": hud_top,
+                        "bottom": hud_bottom
+                    }
                 }));
             }
         }
@@ -1189,24 +1228,44 @@ fn check_context_snap_distance(app: AppHandle) -> tauri::Result<serde_json::Valu
             let hud_pos = hud.outer_position()?;
             let hud_size = hud.outer_size()?;
 
-            // Calculate distance between centers
-            let context_center_x = context_pos.x as f64 + (context_size.width as f64 / 2.0);
-            let context_center_y = context_pos.y as f64 + (context_size.height as f64 / 2.0);
-            let hud_center_x = hud_pos.x as f64 + (hud_size.width as f64 / 2.0);
-            let hud_center_y = hud_pos.y as f64 + (hud_size.height as f64 / 2.0);
+            // Rectangle context
+            let ctx_left = context_pos.x as f64;
+            let ctx_right = ctx_left + context_size.width as f64;
+            let ctx_top = context_pos.y as f64;
+            let ctx_bottom = ctx_top + context_size.height as f64;
 
-            let distance = ((context_center_x - hud_center_x).powi(2) + (context_center_y - hud_center_y).powi(2)).sqrt();
-            let snap_threshold = 200.0;
-            let is_in_snap_zone = distance <= snap_threshold;
+            // Rectangle HUD
+            let hud_left = hud_pos.x as f64;
+            let hud_right = hud_left + hud_size.width as f64;
+            let hud_top = hud_pos.y as f64;
+            let hud_bottom = hud_top + hud_size.height as f64;
 
-            println!("🎯 Context snap check: distance={:.1}px, threshold={:.1}px, should_snap={}", distance, snap_threshold, is_in_snap_zone);
+            // Collision AABB (Axis-Aligned Bounding Box)
+            let is_in_snap_zone =
+                ctx_right >= hud_left &&
+                ctx_left <= hud_right &&
+                ctx_bottom >= hud_top &&
+                ctx_top <= hud_bottom;
+
+            println!(
+                "🎯 Context/HUD overlap: ctx=({}, {} -> {}, {}), hud=({}, {} -> {}, {}), should_snap={}",
+                ctx_left, ctx_top, ctx_right, ctx_bottom, hud_left, hud_top, hud_right, hud_bottom, is_in_snap_zone
+            );
 
             Ok(serde_json::json!({
-                "distance": distance,
-                "threshold": snap_threshold,
                 "should_snap": is_in_snap_zone,
-                "context_pos": { "x": context_pos.x, "y": context_pos.y },
-                "hud_pos": { "x": hud_pos.x, "y": hud_pos.y }
+                "context_rect": {
+                    "left": ctx_left,
+                    "right": ctx_right,
+                    "top": ctx_top,
+                    "bottom": ctx_bottom
+                },
+                "hud_rect": {
+                    "left": hud_left,
+                    "right": hud_right,
+                    "top": hud_top,
+                    "bottom": hud_bottom
+                }
             }))
         } else {
             Err(tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, "HUD window not found")))

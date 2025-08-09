@@ -39,7 +39,7 @@ const ContextPage: React.FC = () => {
   const checkSnapZone = async () => {
     if (!dragActiveRef.current) return; // on évite tout check hors drag
     try {
-      const snapData: any = await invoke('check_snap_distance');
+      const snapData: any = await invoke('check_context_snap_distance');
       const shouldSnap = !!snapData.should_snap;
       const was = isInSnapZone;
 
