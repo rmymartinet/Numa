@@ -225,16 +225,47 @@ fn panel_show(app: AppHandle) -> tauri::Result<()> {
     let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
     let panel = app.get_webview_window("panel").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "Panel window not found")))?;
 
-    // 🎯 SOLUTION 1 : Tout en coordonnées physiques pour éviter les décalages
-    let hud_pos = hud.outer_position().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD position: {}", e))))?;
-    let hud_size = hud.outer_size().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD size: {}", e))))?;
-    
-    // Calculer la position exacte : panel centré sous le HUD (tout en coordonnées physiques)
-    let panel_x = hud_pos.x - (PANEL_WIDTH as i32 - hud_size.width as i32) / 2;  // Centré par rapport au HUD
-    let panel_y = hud_pos.y + hud_size.height as i32 + 20;  // 20px en dessous du HUD
-    
-    println!("🎯 Position HUD physique: ({}, {}), Panel calculé: ({}, {})", hud_pos.x, hud_pos.y, panel_x, panel_y);
-    
+    // 🎯 SOLUTION LOCALE À L'ÉCRAN : Coordonnées locales + offset manuel
+
+    // 0) Écran du HUD et ses caractéristiques
+    let monitor = hud.current_monitor().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get monitor: {}", e))))?.ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "No monitor found")))?;
+    let scale = monitor.scale_factor(); // permet de convertir entre logique et physique
+    let mon_pos_phys = monitor.position(); // Origine physique de l'écran dans le desktop virtuel
+
+    // 1) Position/taille HUD (physique globale → locale physique → logique)
+    let hud_pos_phys_global = hud.outer_position().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD position: {}", e))))?;
+    let hud_pos_phys_local = tauri::PhysicalPosition::new(
+        hud_pos_phys_global.x - mon_pos_phys.x,
+        hud_pos_phys_global.y - mon_pos_phys.y,
+    );
+    let hud_pos_log: tauri::LogicalPosition<f64> = hud_pos_phys_local.to_logical(scale);
+    let hud_size_log: tauri::LogicalSize<f64> = hud.outer_size().map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get HUD size: {}", e))))?.to_logical(scale);
+
+    // 2) Taille panel en logique (constante connue)
+    let panel_size_log = tauri::LogicalSize::new(PANEL_WIDTH as f64, PANEL_HEIGHT as f64);
+
+    // 3) Offset manuel par écran selon scale factor
+    let x_manual_points = match scale {
+        s if (s - 2.0).abs() < 0.01 => 0.0,   // Retina (scale=2.0): parfait
+        s if (s - 1.0).abs() < 0.01 => -20.0, // HDMI (scale=1.0): décaler vers la gauche
+        _ => -10.0, // Autres scales: ajustement moyen
+    };
+
+    // 4) Calculs en logique (espace visuel cohérent)
+    let gap_y_points = 20.0;
+    let target_x_log = hud_pos_log.x + (hud_size_log.width - panel_size_log.width) / 2.0 + x_manual_points;
+    let target_y_log = hud_pos_log.y + hud_size_log.height + gap_y_points;
+
+    // 5) Retour en physique avec arrondi + coordonnées globales
+    let target_x_phys_global = (target_x_log * scale).round() as i32 + mon_pos_phys.x;
+    let target_y_phys_global = (target_y_log * scale).round() as i32 + mon_pos_phys.y;
+
+    let panel_x = target_x_phys_global;
+    let panel_y = target_y_phys_global;
+
+    println!("🎯 Scale: {}, HUD logique: ({:.1}, {:.1}), Panel logique: ({:.1}, {:.1})", scale, hud_pos_log.x, hud_pos_log.y, target_x_log, target_y_log);
+    println!("🎯 Position finale physique: Panel=({}, {})", panel_x, panel_y);
+
     // 🔑 CHANGEMENT CRUCIAL : Utiliser PhysicalPosition au lieu de LogicalPosition
     panel.set_position(tauri::PhysicalPosition::new(panel_x, panel_y)).map_err(|e| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to set panel position: {}", e))))?;
 
@@ -278,7 +309,7 @@ fn panel_hide(app: AppHandle) -> tauri::Result<()> {
 #[tauri::command]
 fn debug_get_positions(app: AppHandle) -> Result<String, String> {
     let mut debug_info = String::new();
-    
+
     if let Some(hud) = app.get_webview_window("hud") {
         match (hud.outer_position(), hud.outer_size()) {
             (Ok(pos), Ok(size)) => {
@@ -287,7 +318,7 @@ fn debug_get_positions(app: AppHandle) -> Result<String, String> {
             _ => debug_info.push_str("❌ Impossible de récupérer les infos HUD\n"),
         }
     }
-    
+
     if let Some(panel) = app.get_webview_window("panel") {
         match (panel.outer_position(), panel.outer_size()) {
             (Ok(pos), Ok(size)) => {
@@ -298,7 +329,7 @@ fn debug_get_positions(app: AppHandle) -> Result<String, String> {
     } else {
         debug_info.push_str("❌ Panel n'existe pas encore\n");
     }
-    
+
     Ok(debug_info)
 }
 
@@ -306,18 +337,30 @@ fn debug_get_positions(app: AppHandle) -> Result<String, String> {
 fn debug_force_reposition(app: AppHandle) -> Result<String, String> {
     let hud = app.get_webview_window("hud").ok_or("HUD window not found")?;
     let panel = app.get_webview_window("panel").ok_or("Panel window not found")?;
-    
-    let hud_pos = hud.outer_position().map_err(|e| format!("Failed to get HUD position: {}", e))?;
-    let hud_size = hud.outer_size().map_err(|e| format!("Failed to get HUD size: {}", e))?;
-    
-    let panel_x = hud_pos.x - (PANEL_WIDTH as i32 - hud_size.width as i32) / 2;
-    let panel_y = hud_pos.y + hud_size.height as i32 + 20;
-    
-    // 🔑 MÊME CORRECTION : PhysicalPosition pour cohérence
-    panel.set_position(tauri::PhysicalPosition::new(panel_x, panel_y))
+
+    let scale = hud.scale_factor().map_err(|e| format!("Failed to get scale factor: {}", e))?;
+
+    // Même logique : tout en logique puis reconvertir
+    let hud_pos_phys = hud.outer_position().map_err(|e| format!("Failed to get HUD position: {}", e))?;
+    let hud_pos_log: tauri::LogicalPosition<f64> = tauri::LogicalPosition::from_physical(hud_pos_phys, scale);
+
+    let hud_size_phys = hud.outer_size().map_err(|e| format!("Failed to get HUD size: {}", e))?;
+    let hud_size_log: tauri::LogicalSize<f64> = tauri::LogicalSize::from_physical(hud_size_phys, scale);
+    let panel_size_log = tauri::LogicalSize::new(PANEL_WIDTH as f64, PANEL_HEIGHT as f64);
+
+    let gap_y_points = 20.0;
+    let gap_x_points = 225.0;
+
+    let target_x_log = hud_pos_log.x + (hud_size_log.width - panel_size_log.width) / 2.0 - gap_x_points;
+    let target_y_log = hud_pos_log.y + hud_size_log.height + gap_y_points;
+
+    let target_pos_log = tauri::LogicalPosition::new(target_x_log, target_y_log);
+    let target_pos_phys = target_pos_log.to_physical::<i32>(scale);
+
+    panel.set_position(tauri::PhysicalPosition::new(target_pos_phys.x, target_pos_phys.y))
         .map_err(|e| format!("Failed to set panel position: {}", e))?;
-    
-    Ok(format!("🔧 Panel repositionné à ({}, {}) [PHYSIQUE]", panel_x, panel_y))
+
+    Ok(format!("🔧 Panel repositionné à ({}, {}) [LOGIQUE→PHYSIQUE] Scale: {:.1}", target_pos_phys.x, target_pos_phys.y, scale))
 }
 
 // === RESPONSE WINDOW MANAGEMENT ===
