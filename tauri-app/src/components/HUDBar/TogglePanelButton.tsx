@@ -6,13 +6,9 @@ interface TogglePanelButtonProps {
   onToggle: () => void;
 }
 
-const TogglePanelButton: React.FC<TogglePanelButtonProps> = ({
-  isExpanded,
-  onToggle,
-}) => {
+const TogglePanelButton: React.FC<TogglePanelButtonProps> = ({ onToggle }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Empêcher la propagation vers le parent
-    console.log('TogglePanelButton clicked!');
     onToggle();
   };
 

@@ -14,7 +14,8 @@ const WindowCloseButton: React.FC<WindowCloseButtonProps> = ({
     <button
       onClick={onClick}
       style={{
-        WebkitAppRegion: 'no-drag' as any,
+        // @ts-ignore
+        WebkitAppRegion: 'no-drag',
         background: 'rgba(255, 255, 255, 0.1)',
         border: '1px solid rgba(255, 255, 255, 0.2)',
         borderRadius: '4px',

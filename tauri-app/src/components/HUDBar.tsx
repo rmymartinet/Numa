@@ -7,7 +7,7 @@ import CloseButton from './HUDBar/CloseButton';
 import LiquidGlassLens from './ui/LiquidGlassLens';
 import GlassButton from './ui/GlassButton';
 import '../styles/glass.css';
-import { SlidersHorizontal } from 'lucide-react';
+// import { SlidersHorizontal } from 'lucide-react';
 
 interface HUDBarProps {
   isListening: boolean;

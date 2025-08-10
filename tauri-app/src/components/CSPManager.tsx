@@ -9,7 +9,7 @@ interface CSPManagerProps {
 }
 
 export const CSPManager: React.FC<CSPManagerProps> = ({ isOpen, onClose }) => {
-  const { getConfig, updateDirective, addSource, removeSource, enableReportOnly, disableReportOnly, reset, isAllowed } = useCSPManager();
+  const { getConfig, addSource, removeSource, enableReportOnly, disableReportOnly, reset, isAllowed } = useCSPManager();
   const [config, setConfig] = useState(getConfig());
   const [testUrl, setTestUrl] = useState('');
   const [testDirective, setTestDirective] = useState('connect-src');
@@ -19,10 +19,10 @@ export const CSPManager: React.FC<CSPManagerProps> = ({ isOpen, onClose }) => {
     setConfig(getConfig());
   }, [isOpen, getConfig]);
 
-  const handleUpdateDirective = (_directive: string, _sources: string[]) => {
-    updateDirective(_directive, _sources);
-    setConfig(getConfig());
-  };
+  // const handleUpdateDirective = (_directive: string, _sources: string[]) => {
+  //   updateDirective(_directive, _sources);
+  //   setConfig(getConfig());
+  // };
 
   const handleAddSource = (directive: string, source: string) => {
     if (source.trim()) {

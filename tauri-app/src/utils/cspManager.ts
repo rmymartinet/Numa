@@ -58,7 +58,7 @@ export class CSPManager {
 
   // Générer la chaîne CSP
   generateCSP(): string {
-    const { directives, reportOnly } = this.config;
+    const { directives } = this.config;
     const parts: string[] = [];
 
     for (const [directive, sources] of Object.entries(directives)) {

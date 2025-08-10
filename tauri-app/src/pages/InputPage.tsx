@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import InputField from '../components/HUDBar/InputField';
 import WindowCloseButton from '../components/ui/WindowCloseButton';
-import { Aperture, Unlink, Link } from 'lucide-react';
+import { Aperture } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';

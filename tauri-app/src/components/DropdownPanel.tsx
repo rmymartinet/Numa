@@ -1,9 +1,4 @@
 import React from 'react';
-import {
-  LazyActivityContent,
-  LazyPersonalizeContent,
-  LazySettingsContent,
-} from './LazyComponents';
 import PanelSidebar from './DropdownPanel/PanelSidebar';
 import PanelHeader from './DropdownPanel/PanelHeader';
 import CaptureTab from './DropdownPanel/CaptureTab';
@@ -103,19 +98,19 @@ const DropdownPanel: React.FC<DropdownPanelProps> = ({
               {/* Content based on active tab */}
               {activeTab === 'activity' && (
                 <div style={{ color: 'white' }}>
-                  <LazyActivityContent />
+                  <p>Activity content placeholder</p>
                 </div>
               )}
 
               {activeTab === 'settings' && (
                 <div style={{ color: 'white' }}>
-                  <LazySettingsContent />
+                  <p>Settings content placeholder</p>
                 </div>
               )}
 
               {activeTab === 'prompts' && (
                 <div style={{ color: 'white' }}>
-                  <LazyPersonalizeContent />
+                  <p>Prompts content placeholder</p>
                 </div>
               )}
 

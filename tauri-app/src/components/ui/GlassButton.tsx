@@ -17,7 +17,6 @@ const GlassButton: React.FC<GlassButtonProps> = ({
   isActive = false,
   disabled = false,
   className = '',
-  size = 'medium',
   title,
   style,
 }) => {
