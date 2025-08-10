@@ -8,6 +8,7 @@ interface GlassButtonProps {
   className?: string;
   size?: 'small' | 'medium' | 'large';
   title?: string;
+  style?: React.CSSProperties;
 }
 
 const GlassButton: React.FC<GlassButtonProps> = ({
@@ -18,6 +19,7 @@ const GlassButton: React.FC<GlassButtonProps> = ({
   className = '',
   size = 'medium',
   title,
+  style,
 }) => {
   return (
     <button
@@ -43,6 +45,7 @@ const GlassButton: React.FC<GlassButtonProps> = ({
         transition: 'all 0.2s ease',
         minWidth: '80px',
         justifyContent: 'center',
+        ...style,
       }}
     >
       {children}

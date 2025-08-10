@@ -6,6 +6,7 @@ interface GlassContainerProps {
   className?: string;
   style?: React.CSSProperties;
   onMouseDown?: (e: React.MouseEvent) => void;
+  interactive?: boolean;
 }
 
 const GlassContainer: React.FC<GlassContainerProps> = ({
@@ -14,17 +15,36 @@ const GlassContainer: React.FC<GlassContainerProps> = ({
   className = '',
   style,
   onMouseDown,
+  interactive = false,
 }) => {
   const variantClasses = {
     default: 'glass',
     pill: 'glass',
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ' ') && onMouseDown) {
+      e.preventDefault();
+      onMouseDown(e as unknown as React.MouseEvent);
+    }
+  };
+
+  const interactiveProps =
+    interactive && onMouseDown
+      ? {
+          role: 'button',
+          tabIndex: 0,
+          onKeyDown: handleKeyDown,
+          'aria-label': 'Interactive glass container',
+        }
+      : {};
+
   return (
     <div
       className={`${variantClasses[variant]} ${className}`}
       style={style}
       onMouseDown={onMouseDown}
+      {...interactiveProps}
     >
       <div className="glass__content">{children}</div>
       <svg width="0" height="0" style={{ position: 'absolute' }}>

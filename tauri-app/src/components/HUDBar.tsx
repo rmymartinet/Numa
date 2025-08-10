@@ -2,14 +2,12 @@ import React, { useRef, useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import CaptureButton from './HUDBar/CaptureButton';
-import InputField from './HUDBar/InputField';
 import TogglePanelButton from './HUDBar/TogglePanelButton';
 import CloseButton from './HUDBar/CloseButton';
 import LiquidGlassLens from './ui/LiquidGlassLens';
 import GlassButton from './ui/GlassButton';
 import '../styles/glass.css';
 import { SlidersHorizontal } from 'lucide-react';
-import VibrantGlass from './VibrantGlass';
 
 interface HUDBarProps {
   isListening: boolean;
@@ -23,10 +21,10 @@ interface HUDBarProps {
 
 const HUDBar: React.FC<HUDBarProps> = ({
   isListening,
-  inputText,
+  inputText: _inputText,
   isPanelExpanded,
   onCapture,
-  onInputChange,
+  onInputChange: _onInputChange,
   onTogglePanel,
   onClose,
 }) => {
@@ -86,12 +84,6 @@ const HUDBar: React.FC<HUDBarProps> = ({
           onTogglePanel(); // Mettre à jour l'état local
         }
 
-        // Fermer ContextPage si elle est ouverte
-        if (isContextOpen) {
-          await invoke('context_hide');
-          setIsContextOpen(false);
-        }
-
         // Ouvrir l'InputPage
         await invoke('input_show');
         setIsInputOpen(true);
@@ -115,12 +107,6 @@ const HUDBar: React.FC<HUDBarProps> = ({
         if (isPanelExpanded) {
           await invoke('panel_hide');
           onTogglePanel(); // Mettre à jour l'état local
-        }
-
-        // Fermer InputPage si elle est ouverte
-        if (isInputOpen) {
-          await invoke('input_hide');
-          setIsInputOpen(false);
         }
 
         // Ouvrir la ContextPage
