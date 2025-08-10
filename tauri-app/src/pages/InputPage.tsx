@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import InputField from '../components/HUDBar/InputField';
+import WindowCloseButton from '../components/ui/WindowCloseButton';
 import { Aperture, Unlink, Link } from 'lucide-react';
 
 interface Message {
@@ -289,8 +290,17 @@ const InputPage: React.FC = () => {
             if (e.key === 'Enter' || e.key === ' ') handleDragStart(0, 0);
           }}
         />
-        {/* Boutons debug (no-drag) */}
+        {/* Bouton de fermeture et boutons debug */}
         <div style={{ display: 'flex', gap: '4px' }}>
+          <WindowCloseButton
+            onClick={async () => {
+              try {
+                await invoke('input_hide');
+              } catch (error) {
+                console.error('Erreur fermeture InputPage:', error);
+              }
+            }}
+          />
           <button
             onClick={() => checkSnapZone()}
             style={

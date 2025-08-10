@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
+import WindowCloseButton from '../components/ui/WindowCloseButton';
 import { Brain } from 'lucide-react';
 
 const ContextPage: React.FC = () => {
@@ -236,8 +237,17 @@ const ContextPage: React.FC = () => {
             if (e.key === 'Enter' || e.key === ' ') handleDragStart(0, 0);
           }}
         />
-        {/* Boutons debug */}
+        {/* Bouton de fermeture et boutons debug */}
         <div style={{ display: 'flex', gap: '4px' }}>
+          <WindowCloseButton
+            onClick={async () => {
+              try {
+                await invoke('context_hide');
+              } catch (error) {
+                console.error('Erreur fermeture ContextPage:', error);
+              }
+            }}
+          />
           <button
             onClick={() => checkSnapZone()}
             style={
