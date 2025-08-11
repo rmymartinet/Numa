@@ -6,7 +6,6 @@ use std::sync::{Arc, Mutex};
 use tracing::{info, warn, error};
 use serde_json;
 use crate::platform::apply_stealth_to_window;
-use crate::errors::AppResult;
 
 /// Partagé dans l'app pour savoir si le mode furtif est actif.
 #[derive(Default, Clone)]
@@ -20,7 +19,7 @@ impl StealthState {
 
 /// Initialiser dans `tauri::Builder`
 /// .manage(StealthState::default())
-pub fn toggle_stealth(app: &AppHandle) -> AppResult<()> {
+pub fn toggle_stealth(app: &AppHandle) -> Result<(), String> {
     let state = app.state::<StealthState>().clone();
     let active = {
         let mut guard = state.0.lock().unwrap();
@@ -75,7 +74,7 @@ pub fn toggle_stealth(app: &AppHandle) -> AppResult<()> {
 }
 
 // Fonction optionnelle pour rendre les fenêtres traversantes
-pub fn make_windows_click_through(app: &AppHandle, click_through: bool) -> AppResult<()> {
+pub fn make_windows_click_through(app: &AppHandle, click_through: bool) -> Result<(), String> {
     #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
     {
         info!("Setting windows click through: {}", click_through);
@@ -105,7 +104,7 @@ pub fn make_windows_click_through(app: &AppHandle, click_through: bool) -> AppRe
 }
 
 // Fonction pour forcer l'activation du mode furtif
-pub fn force_stealth_on(app: &AppHandle) -> AppResult<()> {
+pub fn force_stealth_on(app: &AppHandle) -> Result<(), String> {
     let state = app.state::<StealthState>().clone();
     {
         let mut guard = state.0.lock().unwrap();
