@@ -7,6 +7,7 @@ mod logging;
 mod validation;
 mod csp_manager;
 mod openai;
+mod ns_panel;
 #[cfg(test)]
 mod tests;
 
@@ -1453,6 +1454,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(stealth::StealthState::default())
+        .manage(ns_panel::State::default())
         .invoke_handler(tauri::generate_handler![
             capture_and_analyze,
             capture_screen,
@@ -1494,7 +1496,10 @@ pub fn run() {
             csp_manager::get_csp_for_context,
             openai::chat_with_openai,
             openai::store_openai_key,
-            openai::get_chat_config
+            openai::get_chat_config,
+            ns_panel::init_ns_panel,
+            ns_panel::show_app,
+            ns_panel::hide_app
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
@@ -1508,6 +1513,19 @@ pub fn run() {
             if let Some(hud_win) = app.get_webview_window("hud") {
                 hud_win.set_focus().ok();
                 info!("HUD window focused");
+                
+                // 🎛️ Initialize NSPanel with MoveToActiveSpace functionality
+                #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+                {
+                    info!("🎛️ Initializing NSPanel for cross-space functionality...");
+                    ns_panel::init_ns_panel(app.handle().clone(), hud_win, "cmd+space");
+                    info!("✅ NSPanel initialized - window can now move across macOS spaces");
+                }
+                
+                #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+                {
+                    info!("🎛️ NSPanel not available on this platform");
+                }
             }
 
             // 🚀 Setup background tasks
