@@ -27,6 +27,18 @@ extern "C" {
 #[derive(Default)]
 pub struct Store {
     panel: Option<ShareId<RawNSPanel>>,
+    context_panel: Option<ShareId<RawNSPanel>>,
+}
+
+impl Store {
+    pub fn get_panel_ptr(&self) -> Option<*mut std::ffi::c_void> {
+        self.panel.as_ref().map(|panel| {
+            use objc::runtime::Object;
+            unsafe {
+                std::mem::transmute::<&RawNSPanel, *const Object>(panel) as *mut std::ffi::c_void
+            }
+        })
+    }
 }
 
 #[derive(Default)]
@@ -120,6 +132,11 @@ pub fn init_ns_panel(app_handle: AppHandle<Wry>, window: WebviewWindow<Wry>, sho
     });
 }
 
+#[tauri::command]
+pub fn init_context_ns_panel(app_handle: AppHandle<Wry>, window: WebviewWindow<Wry>) {
+    set_state!(app_handle, context_panel, Some(create_context_ns_panel(&window)));
+}
+
 fn register_shortcut(app_handle: AppHandle<Wry>, shortcut: &str) {
     // For now, we'll handle shortcuts through the application's frontend
     // The global shortcut plugin in Tauri v2 needs special handling
@@ -134,6 +151,33 @@ pub fn show_app(app_handle: AppHandle<Wry>) {
 #[tauri::command]
 pub fn hide_app(app_handle: AppHandle<Wry>) {
     panel!(app_handle).order_out(None);
+}
+
+#[tauri::command]
+pub fn show_context_panel(app_handle: AppHandle<Wry>) {
+    let handle = app_handle.app_handle();
+    let state = handle.state::<State>();
+    let guard = state.0.lock().unwrap();
+    if let Some(context_panel) = &guard.context_panel {
+        tracing::info!("🎛️ Affichage du Context NSPanel...");
+        context_panel.show();
+        tracing::info!("✅ Context NSPanel affiché");
+    } else {
+        tracing::warn!("❌ Context NSPanel non initialisé !");
+    }
+}
+
+#[tauri::command]
+pub fn hide_context_panel(app_handle: AppHandle<Wry>) {
+    let handle = app_handle.app_handle();
+    let state = handle.state::<State>();
+    let guard = state.0.lock().unwrap();
+    if let Some(context_panel) = &guard.context_panel {
+        tracing::info!("🎛️ Masquage du Context NSPanel...");
+        context_panel.order_out(None);
+    } else {
+        tracing::warn!("❌ Context NSPanel non initialisé pour masquage !");
+    }
 }
 
 /// Positions a given window at the center of the monitor with cursor
@@ -248,9 +292,31 @@ unsafe impl Message for RawNSPanel {}
 
 impl RawNSPanel {
     fn show(&self) {
+        // 🎛️ Debug info avant affichage
+        self.log_debug_info("avant show");
+        
+        // 🎛️ Vérifier et corriger la position/taille si nécessaire
+        self.ensure_visible_position();
+        
         self.make_first_responder(Some(self.content_view()));
         self.order_front_regardless();
         self.make_key_window();
+        
+        // 🎛️ Debug info après affichage
+        self.log_debug_info("après show");
+    }
+    
+    fn log_debug_info(&self, moment: &str) {
+        let frame = self.get_frame();
+        let visible = self.is_visible();
+        tracing::info!(
+            "🎛️ NSPanel {} - Visible: {}, Position: ({:.1}, {:.1}), Taille: {:.1}x{:.1}",
+            moment, visible, frame.origin.x, frame.origin.y, frame.size.width, frame.size.height
+        );
+    }
+    
+    fn get_frame(&self) -> NSRect {
+        unsafe { msg_send![self, frame] }
     }
 
     fn is_visible(&self) -> bool {
@@ -299,6 +365,30 @@ impl RawNSPanel {
             let _: () = unsafe { msg_send![self, setDelegate: del] };
         } else {
             let _: () = unsafe { msg_send![self, setDelegate: self] };
+        }
+    }
+    
+    fn set_frame(&self, frame: NSRect) {
+        let _: () = unsafe { msg_send![self, setFrame: frame display: YES] };
+    }
+    
+    fn ensure_visible_position(&self) {
+        let frame = self.get_frame();
+        
+        // Si position ou taille semble problématique, corriger
+        if frame.size.width < 10.0 || frame.size.height < 10.0 || 
+           frame.origin.x < -1000.0 || frame.origin.y < -1000.0 ||
+           frame.origin.x > 3000.0 || frame.origin.y > 3000.0 {
+            
+            tracing::warn!("🎛️ Position/taille problématique détectée, correction...");
+            
+            let new_frame = NSRect {
+                origin: NSPoint { x: 100.0, y: 100.0 },
+                size: cocoa::foundation::NSSize { width: 400.0, height: 300.0 },
+            };
+            
+            self.set_frame(new_frame);
+            tracing::info!("🎛️ Position corrigée: (100, 100) 400x300");
         }
     }
 
@@ -368,9 +458,12 @@ impl RawNSPanelDelegate {
     extern "C" fn window_did_become_key(_: &Object, _: Sel, _: id) {}
 
     /// Hide panel when it's no longer the key window
-    extern "C" fn window_did_resign_key(this: &Object, _: Sel, _: id) {
-        let panel: id = unsafe { *this.get_ivar("panel") };
-        let _: () = unsafe { msg_send![panel, orderOut: nil] };
+    /// 🎛️ DÉSACTIVÉ temporairement pour permettre coexistence avec Context
+    extern "C" fn window_did_resign_key(_this: &Object, _: Sel, _: id) {
+        // Ne plus cacher automatiquement le HUD pour permettre la coexistence
+        // let panel: id = unsafe { *this.get_ivar("panel") };
+        // let _: () = unsafe { msg_send![panel, orderOut: nil] };
+        tracing::info!("🎛️ HUD resign key - pas de masquage automatique pour coexistence");
     }
 }
 
@@ -389,13 +482,29 @@ impl RawNSPanelDelegate {
 }
 
 fn create_ns_panel(window: &WebviewWindow<Wry>) -> ShareId<RawNSPanel> {
+    create_ns_panel_with_delegate(window, true)
+}
+
+fn create_context_ns_panel(window: &WebviewWindow<Wry>) -> ShareId<RawNSPanel> {
+    create_ns_panel_with_delegate(window, false)
+}
+
+fn create_ns_panel_with_delegate(window: &WebviewWindow<Wry>, with_auto_hide: bool) -> ShareId<RawNSPanel> {
     // Convert NSWindow Object to NSPanel
     let handle: id = window.ns_window().unwrap() as _;
     let panel = RawNSPanel::from(handle);
     let panel = panel.share();
 
-    // Set panel above the main menu window level
-    panel.set_level(NSMainMenuWindowLevel + 1);
+    // 🎛️ Niveaux élevés pour les deux pour garantir fullscreen
+    if with_auto_hide {
+        // HUD - niveau le plus élevé 
+        panel.set_level(NSMainMenuWindowLevel + 3);
+        tracing::info!("🎛️ HUD NSPanel créé - niveau: {}", NSMainMenuWindowLevel + 3);
+    } else {
+        // Context - niveau élevé aussi pour fullscreen (juste en dessous du HUD)
+        panel.set_level(NSMainMenuWindowLevel + 2);
+        tracing::info!("🎛️ Context NSPanel créé - niveau: {}", NSMainMenuWindowLevel + 2);
+    }
 
     // Ensure that the panel can display over the top of fullscreen apps
     panel.set_collection_behaviour(
@@ -404,13 +513,22 @@ fn create_ns_panel(window: &WebviewWindow<Wry>) -> ShareId<RawNSPanel> {
             | NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary,
     );
 
-    // Ensures panel does not activate
+    // 🎛️ EXPÉRIMENTATION : même style mask pour les deux pour MoveToActiveSpace
+    // Utiliser NSWindowStyleMaskNonActivatingPanel pour les deux
     panel.set_style_mask(NSWindowStyleMaskNonActivatingPanel);
+    
+    if with_auto_hide {
+        tracing::info!("🎛️ HUD avec NonActivatingPanel pour MoveToActiveSpace");
+    } else {
+        tracing::info!("🎛️ Context avec NonActivatingPanel pour MoveToActiveSpace");
+    }
 
-    // Setup delegate for an NSPanel to listen for window resign key and hide the panel
-    let delegate = RawNSPanelDelegate::new();
-    delegate.set_panel_(panel.clone());
-    panel.set_delegate(Some(delegate));
+    // 🎛️ Setup delegate seulement pour HUD
+    if with_auto_hide {
+        let delegate = RawNSPanelDelegate::new();
+        delegate.set_panel_(panel.clone());
+        panel.set_delegate(Some(delegate));
+    }
 
     panel
 }

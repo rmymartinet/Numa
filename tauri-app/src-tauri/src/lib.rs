@@ -393,15 +393,11 @@ fn ensure_draggable_window(app: &AppHandle, window_name: &str, config: Draggable
         return Ok(w);
     }
 
-    let hud = app.get_webview_window("hud").ok_or_else(|| tauri::Error::from(std::io::Error::new(std::io::ErrorKind::NotFound, "HUD window not found")))?;
-    let parent_ptr = hud.ns_window()?;
-
     let window = WebviewWindowBuilder::new(
         app,
         window_name,
         WebviewUrl::External(format!("http://localhost:1420/{}", config.route).parse().unwrap()),
     )
-    .parent_raw(parent_ptr)
     .decorations(false)
     .transparent(true)
     .always_on_top(true)
@@ -1293,13 +1289,69 @@ fn start_input_dragging(app: AppHandle) -> tauri::Result<()> {
 
 #[tauri::command]
 fn context_show(app: AppHandle) -> tauri::Result<()> {
-    show_draggable_window(&app, "context", DraggableWindowConfig::for_context())
+    // 🎛️ Nouvelle approche : Créer ContextPage comme NSPanel indépendant
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        use crate::ns_panel;
+        
+        info!("🎛️ Context show demandé - vérification de l'existence de la fenêtre...");
+        
+        // Si la fenêtre n'existe pas, la créer
+        if app.get_webview_window("context").is_none() {
+            info!("🎛️ Création de la fenêtre Context...");
+            let config = DraggableWindowConfig::for_context();
+            let window = WebviewWindowBuilder::new(
+                &app,
+                "context",
+                WebviewUrl::External(format!("http://localhost:1420/{}", config.route).parse().unwrap()),
+            )
+            .decorations(false)
+            .transparent(true)
+            .always_on_top(true)
+            .resizable(true)
+            .minimizable(false)
+            .closable(false)
+            .skip_taskbar(true)
+            .inner_size(config.width, config.height)
+            .position(config.initial_x, config.initial_y)
+            .visible(false)
+            .build()?;
+            
+            info!("✅ Fenêtre Context créée - transformation en NSPanel...");
+            // Transformer en NSPanel
+            ns_panel::init_context_ns_panel(app.clone(), window);
+            info!("✅ Context NSPanel initialisé");
+        } else {
+            info!("✅ Fenêtre Context existe déjà");
+        }
+        
+        info!("🎛️ Affichage du Context NSPanel...");
+        // Montrer le NSPanel
+        ns_panel::show_context_panel(app.clone());
+    }
+    
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        // Fallback au système draggable window
+        show_draggable_window(&app, "context", DraggableWindowConfig::for_context())?;
+    }
+    
+    Ok(())
 }
 
 #[tauri::command]
 fn context_hide(app: AppHandle) -> tauri::Result<()> {
-    if let Some(context) = app.get_webview_window("context") {
-        context.hide()?;
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        use crate::ns_panel;
+        ns_panel::hide_context_panel(app);
+    }
+    
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        if let Some(context) = app.get_webview_window("context") {
+            context.hide()?;
+        }
     }
     Ok(())
 }
@@ -1498,8 +1550,11 @@ pub fn run() {
             openai::store_openai_key,
             openai::get_chat_config,
             ns_panel::init_ns_panel,
+            ns_panel::init_context_ns_panel,
             ns_panel::show_app,
-            ns_panel::hide_app
+            ns_panel::hide_app,
+            ns_panel::show_context_panel,
+            ns_panel::hide_context_panel
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
