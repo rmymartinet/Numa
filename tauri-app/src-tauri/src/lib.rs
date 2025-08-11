@@ -1107,20 +1107,75 @@ fn start_chat(app: AppHandle, message: String) -> tauri::Result<()> {
 
 #[tauri::command]
 fn input_show(app: AppHandle) -> tauri::Result<()> {
-    show_draggable_window(&app, "input", DraggableWindowConfig::for_input())
+    // 🎛️ Nouvelle approche : Créer InputPage comme NSPanel indépendant
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        use crate::ns_panel;
+        
+        info!("🎛️ Input show demandé - vérification de l'existence de la fenêtre...");
+        
+        // Si la fenêtre n'existe pas, la créer
+        if app.get_webview_window("input").is_none() {
+            info!("🎛️ Création de la fenêtre Input...");
+            let config = DraggableWindowConfig::for_input();
+            let window = WebviewWindowBuilder::new(
+                &app,
+                "input",
+                WebviewUrl::External(format!("http://localhost:1420/{}", config.route).parse().unwrap()),
+            )
+            .decorations(false)
+            .transparent(true)
+            .always_on_top(true)
+            .resizable(true)
+            .minimizable(false)
+            .closable(false)
+            .skip_taskbar(true)
+            .inner_size(config.width, config.height)
+            .position(config.initial_x, config.initial_y)
+            .visible(false)
+            .build()?;
+            
+            info!("✅ Fenêtre Input créée - transformation en NSPanel...");
+            // Transformer en NSPanel
+            ns_panel::init_input_ns_panel(app.clone(), window);
+            info!("✅ Input NSPanel initialisé");
+        } else {
+            info!("✅ Fenêtre Input existe déjà");
+        }
+        
+        info!("🎛️ Affichage du Input NSPanel...");
+        // Montrer le NSPanel
+        ns_panel::show_input_panel(app.clone());
+    }
+    
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        // Fallback au système draggable window
+        show_draggable_window(&app, "input", DraggableWindowConfig::for_input())?;
+    }
+    
+    Ok(())
 }
 
 #[tauri::command]
 fn input_hide(app: AppHandle) -> tauri::Result<()> {
-    if let Some(input) = app.get_webview_window("input") {
-        #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
-        unsafe {
-            use objc::{msg_send, sel, sel_impl};
-            let win = input.ns_window()? as *mut objc::runtime::Object;
-            let _: () = msg_send![win, setAlphaValue: 0.0];
-            let _: () = msg_send![win, setIgnoresMouseEvents: true];
+    #[cfg(all(target_os = "macos", feature = "stealth_macos"))]
+    {
+        use crate::ns_panel;
+        ns_panel::hide_input_panel(app);
+    }
+    
+    #[cfg(not(all(target_os = "macos", feature = "stealth_macos")))]
+    {
+        if let Some(input) = app.get_webview_window("input") {
+            unsafe {
+                use objc::{msg_send, sel, sel_impl};
+                let win = input.ns_window()? as *mut objc::runtime::Object;
+                let _: () = msg_send![win, setAlphaValue: 0.0];
+                let _: () = msg_send![win, setIgnoresMouseEvents: true];
+            }
+            apply_current_stealth(&app, &input)?;
         }
-        apply_current_stealth(&app, &input)?;
     }
     Ok(())
 }
@@ -1551,10 +1606,13 @@ pub fn run() {
             openai::get_chat_config,
             ns_panel::init_ns_panel,
             ns_panel::init_context_ns_panel,
+            ns_panel::init_input_ns_panel,
             ns_panel::show_app,
             ns_panel::hide_app,
             ns_panel::show_context_panel,
-            ns_panel::hide_context_panel
+            ns_panel::hide_context_panel,
+            ns_panel::show_input_panel,
+            ns_panel::hide_input_panel
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {

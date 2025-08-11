@@ -28,6 +28,7 @@ extern "C" {
 pub struct Store {
     panel: Option<ShareId<RawNSPanel>>,
     context_panel: Option<ShareId<RawNSPanel>>,
+    input_panel: Option<ShareId<RawNSPanel>>,
 }
 
 impl Store {
@@ -137,6 +138,11 @@ pub fn init_context_ns_panel(app_handle: AppHandle<Wry>, window: WebviewWindow<W
     set_state!(app_handle, context_panel, Some(create_context_ns_panel(&window)));
 }
 
+#[tauri::command]
+pub fn init_input_ns_panel(app_handle: AppHandle<Wry>, window: WebviewWindow<Wry>) {
+    set_state!(app_handle, input_panel, Some(create_input_ns_panel(&window)));
+}
+
 fn register_shortcut(app_handle: AppHandle<Wry>, shortcut: &str) {
     // For now, we'll handle shortcuts through the application's frontend
     // The global shortcut plugin in Tauri v2 needs special handling
@@ -177,6 +183,33 @@ pub fn hide_context_panel(app_handle: AppHandle<Wry>) {
         context_panel.order_out(None);
     } else {
         tracing::warn!("❌ Context NSPanel non initialisé pour masquage !");
+    }
+}
+
+#[tauri::command]
+pub fn show_input_panel(app_handle: AppHandle<Wry>) {
+    let handle = app_handle.app_handle();
+    let state = handle.state::<State>();
+    let guard = state.0.lock().unwrap();
+    if let Some(input_panel) = &guard.input_panel {
+        tracing::info!("🎛️ Affichage du Input NSPanel...");
+        input_panel.show();
+        tracing::info!("✅ Input NSPanel affiché");
+    } else {
+        tracing::warn!("❌ Input NSPanel non initialisé !");
+    }
+}
+
+#[tauri::command]
+pub fn hide_input_panel(app_handle: AppHandle<Wry>) {
+    let handle = app_handle.app_handle();
+    let state = handle.state::<State>();
+    let guard = state.0.lock().unwrap();
+    if let Some(input_panel) = &guard.input_panel {
+        tracing::info!("🎛️ Masquage du Input NSPanel...");
+        input_panel.order_out(None);
+    } else {
+        tracing::warn!("❌ Input NSPanel non initialisé pour masquage !");
     }
 }
 
@@ -486,6 +519,10 @@ fn create_ns_panel(window: &WebviewWindow<Wry>) -> ShareId<RawNSPanel> {
 }
 
 fn create_context_ns_panel(window: &WebviewWindow<Wry>) -> ShareId<RawNSPanel> {
+    create_ns_panel_with_delegate(window, false)
+}
+
+fn create_input_ns_panel(window: &WebviewWindow<Wry>) -> ShareId<RawNSPanel> {
     create_ns_panel_with_delegate(window, false)
 }
 
